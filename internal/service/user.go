@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
 	"gorm.io/gorm"
@@ -293,8 +294,8 @@ func (us *UserService) InfoByOauthId(op string, openId string) *model.User {
 
 // RegisterByOauth 注册
 func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (error, *model.User) {
-	us.ctx.Lock.Lock("registerByOauth")
-	defer us.ctx.Lock.UnLock("registerByOauth")
+	us.ctx.Lock.Lock(lock.LockRegisterByOauth)
+	defer us.ctx.Lock.UnLock(lock.LockRegisterByOauth)
 	ut := us.ctx.Services.OauthService.UserThirdInfo(op, oauthUser.OpenId)
 	if ut.Id != 0 {
 		return nil, us.InfoById(ut.UserId)
