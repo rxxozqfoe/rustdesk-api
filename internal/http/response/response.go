@@ -3,8 +3,8 @@ package response
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -14,14 +14,14 @@ import (
 // any handler runs, never mutated, and never read from the request path otherwise.
 var (
 	localizerFn func(lang string) *i18n.Localizer
-	logger      *logrus.Logger
+	log         *logger.Logger
 )
 
 // SetLocalizer wires the i18n localizer constructor. Call once at startup.
 func SetLocalizer(fn func(lang string) *i18n.Localizer) { localizerFn = fn }
 
 // SetLogger wires the logger used when translation fails. Call once at startup.
-func SetLogger(l *logrus.Logger) { logger = l }
+func SetLogger(l *logger.Logger) { log = l }
 
 type Response struct {
 	Code    int         `json:"code"`
@@ -76,7 +76,7 @@ func TranslateMsg(c *gin.Context, messageId string) string {
 		ID: messageId,
 	})
 	if err != nil {
-		logger.Warn("LocalizeMessage Error: " + err.Error())
+		log.Warn("LocalizeMessage Error: " + err.Error())
 		errMsg = messageId
 	}
 	return errMsg
@@ -90,7 +90,7 @@ func TranslateTempMsg(c *gin.Context, messageId string, templateData map[string]
 		TemplateData: templateData,
 	})
 	if err != nil {
-		logger.Warn("LocalizeMessage Error: " + err.Error())
+		log.Warn("LocalizeMessage Error: " + err.Error())
 		errMsg = messageId
 	}
 	return errMsg
@@ -109,7 +109,7 @@ func TranslateParamMsg(c *gin.Context, messageId string, params ...string) strin
 		TemplateData: templateData,
 	})
 	if err != nil {
-		logger.Warn("LocalizeMessage Error: " + err.Error())
+		log.Warn("LocalizeMessage Error: " + err.Error())
 		errMsg = messageId
 	}
 	return errMsg

@@ -1,13 +1,14 @@
 package http
 
 import (
+	"log/slog"
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/middleware"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/router"
-	"github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
 )
 
 // ApiInit builds the gin engine and registers all routes. It takes the shared
@@ -15,6 +16,14 @@ import (
 // nothing in this package reaches for package-level state.
 func ApiInit(hd *deps.HandlerDeps) {
 	gin.SetMode(hd.Config.Gin.Mode)
+
+	// Route gin's own writers (panic recovery, debug warnings) into our
+	// structured slog-backed logger so nothing escapes to raw stdout.
+	if hd.Logger != nil {
+		gin.DefaultWriter = hd.Logger.Writer(slog.LevelInfo)
+		gin.DefaultErrorWriter = hd.Logger.Writer(slog.LevelError)
+	}
+
 	g := gin.New()
 
 	// [WARNING] You trusted all proxies, this is NOT safe. We recommend you set a value.
@@ -26,10 +35,6 @@ func ApiInit(hd *deps.HandlerDeps) {
 		}
 	}
 
-	if hd.Config.Gin.Mode == gin.ReleaseMode && hd.Logger != nil {
-		// Route gin's Recovery error output into our structured logger.
-		gin.DefaultErrorWriter = hd.Logger.WriterLevel(logrus.ErrorLevel)
-	}
 	g.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusNotFound, "404 not found")
 	})

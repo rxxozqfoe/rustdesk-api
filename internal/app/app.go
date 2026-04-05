@@ -7,7 +7,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/lejianwen/rustdesk-api/v2/internal/config"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/cache"
-	"github.com/sirupsen/logrus"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
 	"github.com/spf13/viper"
 )
 
@@ -22,7 +22,7 @@ import (
 // There is no package-level singleton — dependencies flow explicitly from main.
 type AppContext struct {
 	Config     config.Config
-	Logger     *logrus.Logger
+	Logger     *logger.Logger
 	ConfigPath string
 	Viper      *viper.Viper
 	Redis      *redis.Client

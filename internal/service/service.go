@@ -4,8 +4,8 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/internal/config"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/jwt"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -16,7 +16,7 @@ import (
 type ServiceContext struct {
 	Config   *config.Config
 	DB       *gorm.DB
-	Logger   *log.Logger
+	Logger   *logger.Logger
 	Jwt      *jwt.Jwt
 	Lock     lock.Locker
 	Services *Service
@@ -37,7 +37,7 @@ type Service struct {
 	*AppService
 }
 
-func New(c *config.Config, g *gorm.DB, l *log.Logger, j *jwt.Jwt, lo lock.Locker) *Service {
+func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Locker) *Service {
 	sc := &ServiceContext{Config: c, DB: g, Logger: l, Jwt: j, Lock: lo}
 	s := &Service{
 		UserService:        &UserService{ctx: sc},

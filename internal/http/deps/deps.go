@@ -8,11 +8,11 @@ package deps
 import (
 	"github.com/lejianwen/rustdesk-api/v2/internal/app"
 	"github.com/lejianwen/rustdesk-api/v2/internal/config"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/upload"
 	"github.com/lejianwen/rustdesk-api/v2/internal/service"
 	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/sirupsen/logrus"
 )
 
 // LocalizerFunc returns a localizer for the given Accept-Language header value.
@@ -23,7 +23,7 @@ type LocalizerFunc func(lang string) *i18n.Localizer
 // Middleware factories typically take narrower slices of these fields.
 type HandlerDeps struct {
 	Config       *config.Config
-	Logger       *logrus.Logger
+	Logger       *logger.Logger
 	Validator    app.AppValidator
 	Localizer    LocalizerFunc
 	LoginLimiter *utils.LoginLimiter
