@@ -38,6 +38,7 @@ type Config struct {
 	App        App
 	Admin      Admin
 	Gorm       Gorm
+	Sqlite     Sqlite
 	Mysql      Mysql
 	Postgresql Postgresql
 	Gin        Gin

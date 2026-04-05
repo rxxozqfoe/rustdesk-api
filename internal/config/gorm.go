@@ -12,6 +12,10 @@ type Gorm struct {
 	MaxOpenConns int    `mapstructure:"max-open-conns"`
 }
 
+type Sqlite struct {
+	Path string `mapstructure:"path"`
+}
+
 type Mysql struct {
 	Addr     string `mapstructure:"addr"`
 	Username string `mapstructure:"username"`

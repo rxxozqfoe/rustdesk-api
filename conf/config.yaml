@@ -30,6 +30,9 @@ gorm:
   max-idle-conns: 10
   max-open-conns: 100
 
+sqlite:
+  path: "./data/rustdeskapi.db"
+
 mysql:
   username: ""
   password: ""

@@ -186,6 +186,7 @@ func InitApp() {
 			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
 			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
 		}, a.Logger)
+
 	case config.TypePostgresql:
 		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=%s",
 			a.Config.Postgresql.Host,
@@ -201,11 +202,16 @@ func InitApp() {
 			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
 			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
 		}, a.Logger)
-	default:
+
+	case config.TypeSqlite:
 		db = orm.NewSqlite(&orm.SqliteConfig{
+			Path:         a.Config.Sqlite.Path,
 			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
 			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
 		}, a.Logger)
+
+	default:
+		a.Logger.Fatalf("unsupported database type: %s", a.Config.Gorm.Type)
 	}
 
 	// OSS
