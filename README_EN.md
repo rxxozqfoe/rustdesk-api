@@ -219,7 +219,29 @@ The table below does not list all configurations. Please refer to the configurat
     lejianwen/rustdesk-api
     ```
 
-2. Using `docker-compose`,look [WIKI](https://github.com/lejianwen/rustdesk-api/wiki)
+2. Using `docker compose`, example `docker-compose.yaml`:
+
+    ```yaml
+    services:
+      rustdesk-api:
+        image: lejianwen/rustdesk-api
+        container_name: rustdesk-api
+        environment:
+          - TZ=Asia/Shanghai
+          - RUSTDESK_API_RUSTDESK_ID_SERVER=192.168.1.66:21116
+          - RUSTDESK_API_RUSTDESK_RELAY_SERVER=192.168.1.66:21117
+          - RUSTDESK_API_RUSTDESK_API_SERVER=http://127.0.0.1:21114
+          - RUSTDESK_API_RUSTDESK_KEY=123456789
+        ports:
+          - 21114:21114
+        volumes:
+          - ./data/rustdesk/api:/app/data # database
+          # - ./conf:/app/conf # config
+          # - ./resources:/app/resources # static resources
+        restart: unless-stopped
+    ```
+
+    See [WIKI](https://github.com/lejianwen/rustdesk-api/wiki) for more.
 
 #### Running from Release
 
@@ -268,9 +290,9 @@ Download the release from [release](https://github.com/lejianwen/rustdesk-api/re
    > RUSTDESK_API_GIN_RESOURCES_PATH=/opt/rustdesk-api/resources ./apimain -c /opt/rustdesk-api/conf/config.yaml
    > ```
 
-5. To compile, change to the project root directory. For Windows, run `build.bat`, and for Linux, run `build.sh`. After
-   compiling, the corresponding executables will be generated in the `release` directory. Run the compiled executables
-   directly.
+5. To compile, change to the project root directory and run `make build` (on Windows, install `make` or use WSL / MSYS2).
+   For cross-compilation, specify the target platform, e.g. `make build GOOS=linux GOARCH=arm64`. After compiling, the
+   corresponding executables will be generated in the `release` directory. Run the compiled executables directly.
 
 6. Open your browser and visit `http://<your server[:port]>/_admin/`, with default credentials `admin admin`. Please
    change the password promptly.

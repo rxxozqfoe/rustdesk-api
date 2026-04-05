@@ -222,7 +222,29 @@
     lejianwen/rustdesk-api
     ```
 
-2. 使用`docker compose`，参考[WIKI](https://github.com/lejianwen/rustdesk-api/wiki)
+2. 使用 `docker compose`，示例 `docker-compose.yaml`：
+
+    ```yaml
+    services:
+      rustdesk-api:
+        image: lejianwen/rustdesk-api
+        container_name: rustdesk-api
+        environment:
+          - TZ=Asia/Shanghai
+          - RUSTDESK_API_RUSTDESK_ID_SERVER=192.168.1.66:21116
+          - RUSTDESK_API_RUSTDESK_RELAY_SERVER=192.168.1.66:21117
+          - RUSTDESK_API_RUSTDESK_API_SERVER=http://127.0.0.1:21114
+          - RUSTDESK_API_RUSTDESK_KEY=123456789
+        ports:
+          - 21114:21114
+        volumes:
+          - ./data/rustdesk/api:/app/data # database
+          # - ./conf:/app/conf # config
+          # - ./resources:/app/resources # 静态资源
+        restart: unless-stopped
+    ```
+
+    更多配置参考 [WIKI](https://github.com/lejianwen/rustdesk-api/wiki)
 
 #### 下载release直接运行
 
@@ -267,7 +289,8 @@
    > ```bash
    > RUSTDESK_API_GIN_RESOURCES_PATH=/opt/rustdesk-api/resources ./apimain -c /opt/rustdesk-api/conf/config.yaml
    > ```
-5. 编译，如果想自己编译,先cd到项目根目录，然后windows下直接运行`build.bat`,linux下运行`build.sh`,编译后会在`release`
+5. 编译，如果想自己编译,先cd到项目根目录，然后运行`make build`即可（Windows 需安装 make，或使用 WSL / MSYS2）。
+   跨平台编译可通过 `make build GOOS=linux GOARCH=arm64` 指定目标平台。编译后会在`release`
    目录下生成对应的可执行文件。直接运行编译后的可执行文件即可。
 
 6. 打开浏览器访问`http://<your server[:port]>/_admin/`，默认用户名密码为`admin`，请及时更改密码。
