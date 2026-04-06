@@ -63,6 +63,11 @@ func ApiInit(g *gin.Engine, hd *deps.HandlerDeps) {
 		frg.POST("/audit/file", au.AuditFile)
 	}
 
+	{
+		rec := &api.Record{HD: hd}
+		frg.POST("/record", rec.Upload)
+	}
+
 	frg.Use(middleware.RustAuth(hd.Config, users))
 	{
 		u := &api.User{HD: hd}
@@ -84,6 +89,10 @@ func ApiInit(g *gin.Engine, hd *deps.HandlerDeps) {
 		ab := &api.Ab{HD: hd}
 		frg.GET("/ab", ab.Ab)
 		frg.POST("/ab", ab.UpAb)
+	}
+	{
+		dev := &api.Device{HD: hd}
+		frg.POST("/devices/cli", dev.Cli)
 	}
 
 	PersonalRoutes(frg, hd)

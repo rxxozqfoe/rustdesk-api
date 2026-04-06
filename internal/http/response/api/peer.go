@@ -67,7 +67,7 @@ func (gpp *GroupPeerPayload) FromPeer(p *model.Peer, username string, dGroupName
 		Os:         p.Os,
 		Username:   p.Username,
 	}
-	gpp.Note = ""
+	gpp.Note = p.Note
 	gpp.UserName = username
 	gpp.DeviceGroupName = dGroupName
 }

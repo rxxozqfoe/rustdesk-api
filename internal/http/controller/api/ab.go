@@ -389,6 +389,14 @@ func (a *Ab) Settings(c *gin.Context) {
 // @Router /ab/shared/profiles [post]
 // @Security BearerAuth
 func (a *Ab) SharedProfiles(c *gin.Context) {
+	current, _ := strconv.Atoi(c.DefaultQuery("current", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "100"))
+	if current < 1 {
+		current = 1
+	}
+	if pageSize < 1 {
+		pageSize = 100
+	}
 
 	var res []*api.SharedProfilesPayload
 
@@ -442,9 +450,21 @@ func (a *Ab) SharedProfiles(c *gin.Context) {
 		})
 	}
 
+	// Apply pagination
+	total := len(res)
+	start := (current - 1) * pageSize
+	if start > total {
+		start = total
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	pagedRes := res[start:end]
+
 	c.JSON(http.StatusOK, gin.H{
-		"total": 0, //len(res),
-		"data":  res,
+		"total": total,
+		"data":  pagedRes,
 	})
 }
 
@@ -544,13 +564,22 @@ func (a *Ab) Peers(c *gin.Context) {
 		return
 	}
 
+	current, _ := strconv.Atoi(c.DefaultQuery("current", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "1000"))
+	if current < 1 {
+		current = 1
+	}
+	if pageSize < 1 {
+		pageSize = 1000
+	}
+
 	//check privileges
 	if !a.HD.Services.AddressBookService.CheckUserReadPrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
 
-	al := a.HD.Services.AddressBookService.ListByUserIdAndCollectionId(uid, cid, 1, 1000)
+	al := a.HD.Services.AddressBookService.ListByUserIdAndCollectionId(uid, cid, uint(current), uint(pageSize))
 	c.JSON(http.StatusOK, gin.H{
 		"total":            al.Total,
 		"data":             al.AddressBooks,
@@ -709,7 +738,7 @@ func (a *Ab) PeerUpdate(c *gin.Context) {
 		return
 	}
 	//允许的字段
-	allowUp := []string{"password", "hash", "tags", "alias"}
+	allowUp := []string{"password", "hash", "tags", "alias", "note", "username", "hostname", "platform"}
 	//f中的字段如果不在allowUp中，就删除
 	for k := range f {
 		if !utils.InArray(k, allowUp) {

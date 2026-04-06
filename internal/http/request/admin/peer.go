@@ -14,6 +14,7 @@ type PeerForm struct {
 	Version  string `json:"version"`
 	GroupId  uint   `json:"group_id"`
 	Alias    string `json:"alias"`
+	Note     string `json:"note"`
 }
 
 type PeerBatchDeleteForm struct {
@@ -34,6 +35,7 @@ func (f *PeerForm) ToPeer() *model.Peer {
 		Version:  f.Version,
 		GroupId:  f.GroupId,
 		Alias:    f.Alias,
+		Note:     f.Note,
 	}
 }
 

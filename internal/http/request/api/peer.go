@@ -13,14 +13,25 @@ type AddressBookForm struct {
 }
 
 type PeerForm struct {
-	Cpu      string `json:"cpu"`
-	Hostname string `json:"hostname"`
-	Id       string `json:"id"`
-	Memory   string `json:"memory"`
-	Os       string `json:"os"`
-	Username string `json:"username"`
-	Uuid     string `json:"uuid"`
-	Version  string `json:"version"`
+	Cpu                       string `json:"cpu"`
+	Hostname                  string `json:"hostname"`
+	Id                        string `json:"id"`
+	Memory                    string `json:"memory"`
+	Os                        string `json:"os"`
+	Username                  string `json:"username"`
+	Uuid                      string `json:"uuid"`
+	Version                   string `json:"version"`
+	Platform                  string `json:"platform"`
+	CpuCores                  int    `json:"cpu_cores"`
+	PresetAddressBookName     string `json:"preset-address-book-name,omitempty"`
+	PresetAddressBookTag      string `json:"preset-address-book-tag,omitempty"`
+	PresetAddressBookAlias    string `json:"preset-address-book-alias,omitempty"`
+	PresetAddressBookPassword string `json:"preset-address-book-password,omitempty"`
+	PresetAddressBookNote     string `json:"preset-address-book-note,omitempty"`
+	PresetUsername            string `json:"preset-username,omitempty"`
+	PresetStrategyName        string `json:"preset-strategy-name,omitempty"`
+	PresetDeviceGroupName     string `json:"preset-device-group-name,omitempty"`
+	PresetNote                string `json:"preset-note,omitempty"`
 }
 
 func (pf *PeerForm) ToPeer() *model.Peer {
@@ -33,6 +44,8 @@ func (pf *PeerForm) ToPeer() *model.Peer {
 		Username: pf.Username,
 		Uuid:     pf.Uuid,
 		Version:  pf.Version,
+		Platform: pf.Platform,
+		Note:     pf.PresetNote,
 	}
 }
 
@@ -60,6 +73,7 @@ func (pabf *PersonalAddressBookForm) ToAddressBook() *model.AddressBook {
 		Online:           pabf.Online,
 		LoginName:        pabf.LoginName,
 		SameServer:       pabf.SameServer,
+		Note:             pabf.Note,
 	}
 }
 
@@ -73,7 +87,9 @@ type TagColorForm struct {
 }
 
 type PeerInfoInHeartbeat struct {
-	Id   string `json:"id"`
-	Uuid string `json:"uuid"`
-	Ver  int    `json:"ver"`
+	Id         string  `json:"id"`
+	Uuid       string  `json:"uuid"`
+	Ver        int     `json:"ver"`
+	Conns      []int64 `json:"conns,omitempty"`
+	ModifiedAt int64   `json:"modified_at"`
 }

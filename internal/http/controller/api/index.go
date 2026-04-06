@@ -61,7 +61,9 @@ func (i *Index) Heartbeat(c *gin.Context) {
 		upp := &model.Peer{RowId: peer.RowId, LastOnlineTime: time.Now().Unix(), LastOnlineIp: c.ClientIP()}
 		i.HD.Services.PeerService.Update(upp)
 	}
-	c.JSON(http.StatusOK, gin.H{})
+	c.JSON(http.StatusOK, gin.H{
+		"modified_at": 0,
+	})
 }
 
 // Version 版本

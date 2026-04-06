@@ -24,6 +24,7 @@ type AddressBookForm struct {
 	Online           bool     `json:"online"`
 	LoginName        string   `json:"loginName" `
 	SameServer       bool     `json:"sameServer"`
+	Note             string   `json:"note"`
 	CollectionId     uint     `json:"collection_id"`
 }
 
@@ -48,6 +49,7 @@ func (a AddressBookForm) ToAddressBook() *model.AddressBook {
 		Online:           a.Online,
 		LoginName:        a.LoginName,
 		SameServer:       a.SameServer,
+		Note:             a.Note,
 		CollectionId:     a.CollectionId,
 	}
 
@@ -75,6 +77,7 @@ func (a AddressBookForm) ToAddressBooks() []*model.AddressBook {
 			Online:           a.Online,
 			LoginName:        a.LoginName,
 			SameServer:       a.SameServer,
+			Note:             a.Note,
 			CollectionId:     a.CollectionId,
 		})
 	}
