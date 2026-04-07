@@ -94,6 +94,13 @@ func ApiInit(g *gin.Engine, hd *deps.HandlerDeps) {
 		dev := &api.Device{HD: hd}
 		frg.POST("/devices/cli", dev.Cli)
 	}
+	{
+		sc := &api.StrategyController{HD: hd}
+		frg.GET("/strategies", sc.List)
+		frg.GET("/strategies/:guid", sc.Detail)
+		frg.PUT("/strategies/:guid/status", sc.UpdateStatus)
+		frg.POST("/strategies/assign", sc.Assign)
+	}
 
 	PersonalRoutes(frg, hd)
 	g.StaticFS("/upload", http.Dir(hd.Config.Gin.ResourcesPath+"/public/upload"))

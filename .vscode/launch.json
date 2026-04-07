@@ -17,6 +17,10 @@
                 "RUSTDESK_API_GIN_API_ADDR": "0.0.0.0:21114",
                 "RUSTDESK_API_GIN_TRUST_PROXY": "",
             },
+            "args": [
+                "-c",
+                "./conf/config.dev.yaml"
+            ]
         }
     ]
 }

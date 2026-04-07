@@ -9,6 +9,7 @@ import (
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
 	requstform "github.com/lejianwen/rustdesk-api/v2/internal/http/request/api"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
+	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 )
 
 type Peer struct {
@@ -54,6 +55,34 @@ func (p *Peer) SysInfo(c *gin.Context) {
 			return
 		}
 	}
+	// Handle preset-strategy-name: auto-assign strategy to this peer
+	if f.PresetStrategyName != "" {
+		strategy := p.HD.Services.StrategyService.InfoByName(f.PresetStrategyName)
+		if strategy != nil && strategy.Id > 0 {
+			p.HD.Services.StrategyService.AssignToPeer(strategy.Id, pe.RowId)
+		}
+	}
+
+	// Handle preset-device-group-name: auto-assign device group
+	if f.PresetDeviceGroupName != "" && pe.GroupId == 0 {
+		allGroups := p.HD.Services.GroupService.DeviceGroupList(1, 999, nil)
+		for _, g := range allGroups.DeviceGroups {
+			if g.Name == f.PresetDeviceGroupName {
+				pe.GroupId = g.Id
+				p.HD.Services.PeerService.Update(&model.Peer{RowId: pe.RowId, GroupId: g.Id})
+				break
+			}
+		}
+	}
+
+	// Handle preset-username: auto-assign user
+	if f.PresetUsername != "" && pe.UserId == 0 {
+		u := p.HD.Services.UserService.InfoByUsername(f.PresetUsername)
+		if u != nil && u.Id != 0 {
+			p.HD.Services.PeerService.Update(&model.Peer{RowId: pe.RowId, UserId: u.Id})
+		}
+	}
+
 	//SYSINFO_UPDATED 上传成功
 	//ID_NOT_FOUND 下次心跳会上传
 	//直接响应文本

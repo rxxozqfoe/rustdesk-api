@@ -35,6 +35,7 @@ type Service struct {
 	*ServerCmdService
 	*LdapService
 	*AppService
+	*StrategyService
 }
 
 func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Locker) *Service {
@@ -52,6 +53,7 @@ func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Loc
 		ServerCmdService:   &ServerCmdService{ctx: sc},
 		LdapService:        &LdapService{ctx: sc},
 		AppService:         &AppService{},
+		StrategyService:    &StrategyService{ctx: sc},
 	}
 	sc.Services = s // tie the knot so siblings can reach each other via ctx.Services
 	return s

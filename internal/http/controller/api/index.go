@@ -61,9 +61,26 @@ func (i *Index) Heartbeat(c *gin.Context) {
 		upp := &model.Peer{RowId: peer.RowId, LastOnlineTime: time.Now().Unix(), LastOnlineIp: c.ClientIP()}
 		i.HD.Services.PeerService.Update(upp)
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"modified_at": 0,
-	})
+
+	resp := gin.H{}
+
+	// Resolve strategy for this peer
+	strategy := i.HD.Services.StrategyService.ResolveForPeer(peer)
+	if strategy != nil {
+		serverModifiedAt := time.Time(strategy.UpdatedAt).Unix()
+		resp["modified_at"] = serverModifiedAt
+		// Only include strategy payload when client's timestamp differs
+		if info.ModifiedAt != serverModifiedAt {
+			resp["strategy"] = gin.H{
+				"config_options": i.HD.Services.StrategyService.ConfigOptionsMap(strategy),
+				"extra":          i.HD.Services.StrategyService.ExtraMap(strategy),
+			}
+		}
+	} else {
+		resp["modified_at"] = 0
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // Version 版本

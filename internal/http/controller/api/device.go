@@ -71,6 +71,13 @@ func (d *Device) Cli(c *gin.Context) {
 		}
 	}
 
+	if f.StrategyName != "" {
+		strategy := d.HD.Services.StrategyService.InfoByName(f.StrategyName)
+		if strategy != nil && strategy.Id > 0 {
+			d.HD.Services.StrategyService.AssignToPeer(strategy.Id, peer.RowId)
+		}
+	}
+
 	if f.Note != "" {
 		peer.Note = f.Note
 	}

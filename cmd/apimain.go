@@ -116,7 +116,7 @@ var resetUserPwdCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "./conf/config.yaml", "choose config file")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "conf/config.yaml", "choose config file")
 	rootCmd.AddCommand(resetPwdCmd, resetUserPwdCmd)
 }
 
@@ -232,6 +232,7 @@ func InitApp() {
 	svcs := service.New(&a.Config, db, a.Logger, jwtHandler, locker)
 
 	// Login limiter (HTTP-layer concern)
+	a.Logger.Info(fmt.Sprintf("CaptchaThreshold: %d, BanThreshold: %d", a.Config.App.CaptchaThreshold, a.Config.App.BanThreshold))
 	limiter := utils.NewLoginLimiter(utils.SecurityPolicy{
 		CaptchaThreshold: a.Config.App.CaptchaThreshold,
 		BanThreshold:     a.Config.App.BanThreshold,
