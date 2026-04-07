@@ -52,8 +52,8 @@ func (a *Ab) Ab(c *gin.Context) {
 	}
 	data, _ := json.Marshal(res)
 	c.JSON(http.StatusOK, gin.H{
-		"data": string(data),
-		//"licensed_devices": 999,
+		"data":             string(data),
+		"licensed_devices": 999,
 	})
 }
 
@@ -581,9 +581,8 @@ func (a *Ab) Peers(c *gin.Context) {
 
 	al := a.HD.Services.AddressBookService.ListByUserIdAndCollectionId(uid, cid, uint(current), uint(pageSize))
 	c.JSON(http.StatusOK, gin.H{
-		"total":            al.Total,
-		"data":             al.AddressBooks,
-		"licensed_devices": 99999,
+		"total": al.Total,
+		"data":  al.AddressBooks,
 	})
 }
 

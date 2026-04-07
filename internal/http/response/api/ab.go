@@ -9,9 +9,10 @@ type AbList struct {
 }
 
 type SharedProfilesPayload struct {
-	Guid  string `json:"guid"`
-	Name  string `json:"name"`
-	Owner string `json:"owner"`
-	Note  string `json:"note"`
-	Rule  int    `json:"rule"`
+	Guid  string      `json:"guid"`
+	Name  string      `json:"name"`
+	Owner string      `json:"owner"`
+	Note  string      `json:"note"`
+	Rule  int         `json:"rule"`
+	Info  interface{} `json:"info"`
 }

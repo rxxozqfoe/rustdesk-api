@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -78,6 +79,36 @@ func (i *Index) Heartbeat(c *gin.Context) {
 		}
 	} else {
 		resp["modified_at"] = 0
+	}
+
+	// Signal client to re-upload sysinfo when peer record is incomplete
+	if peer.Version == "" || peer.Os == "" {
+		resp["sysinfo"] = true
+	}
+
+	// Collect pending disconnect commands for this peer
+	cmds := i.HD.Services.PeerCommandService.PendingByPeerId(peer.Id)
+	if len(cmds) > 0 {
+		var allConnIds []int
+		var processedIds []uint
+		hasDisconnect := false
+		for _, cmd := range cmds {
+			if cmd.Command == model.PeerCommandDisconnect {
+				hasDisconnect = true
+				var connIds []int
+				if err := json.Unmarshal([]byte(cmd.Payload), &connIds); err == nil {
+					allConnIds = append(allConnIds, connIds...)
+				}
+			}
+			processedIds = append(processedIds, cmd.Id)
+		}
+		if hasDisconnect {
+			if allConnIds == nil {
+				allConnIds = []int{}
+			}
+			resp["disconnect"] = allConnIds
+		}
+		i.HD.Services.PeerCommandService.DeleteByIds(processedIds)
 	}
 
 	c.JSON(http.StatusOK, resp)
