@@ -349,6 +349,10 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.ServerCmd{},
 		&model.DeviceGroup{},
 		&model.PeerCommand{},
+		&model.Strategy{},
+		&model.StrategyPeer{},
+		&model.StrategyUser{},
+		&model.StrategyDeviceGroup{},
 	)
 	if err != nil {
 		a.Logger.Error("migrate err :=>", err)

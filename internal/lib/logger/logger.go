@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -138,20 +140,25 @@ func (w *levelWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-func (l *Logger) log(level slog.Level, args ...any) {
+// logSkip logs a message with the correct caller at the given skip depth.
+// skip=2 means: logSkip's caller's caller (i.e. the public method's caller).
+func (l *Logger) logSkip(skip int, level slog.Level, msg string) {
 	ctx := context.Background()
 	if !l.sl.Enabled(ctx, level) {
 		return
 	}
-	l.sl.Log(ctx, level, fmt.Sprint(args...))
+	var pcs [1]uintptr
+	runtime.Callers(skip, pcs[:])
+	r := slog.NewRecord(time.Now(), level, msg, pcs[0])
+	_ = l.sl.Handler().Handle(ctx, r)
+}
+
+func (l *Logger) log(level slog.Level, args ...any) {
+	l.logSkip(4, level, fmt.Sprint(args...))
 }
 
 func (l *Logger) logf(level slog.Level, format string, args ...any) {
-	ctx := context.Background()
-	if !l.sl.Enabled(ctx, level) {
-		return
-	}
-	l.sl.Log(ctx, level, fmt.Sprintf(format, args...))
+	l.logSkip(4, level, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Debug(args ...any) { l.log(slog.LevelDebug, args...) }

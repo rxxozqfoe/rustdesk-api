@@ -45,6 +45,7 @@ func Init(g *gin.Engine, hd *deps.HandlerDeps) {
 
 	RustdeskCmdBind(adg, hd)
 	DeviceGroupBind(adg, hd)
+	StrategyBind(adg, hd)
 }
 
 func RustdeskCmdBind(adg *gin.RouterGroup, hd *deps.HandlerDeps) {
@@ -111,6 +112,21 @@ func DeviceGroupBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 		aR.POST("/create", cont.Create)
 		aR.POST("/update", cont.Update)
 		aR.POST("/delete", cont.Delete)
+	}
+}
+
+func StrategyBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	users := hd.Services.UserService
+	cont := &admin.Strategy{HD: hd}
+	aR := rg.Group("/strategy").Use(middleware.AdminPrivilege(users))
+	{
+		aR.GET("/list", cont.List)
+		aR.GET("/detail/:id", cont.Detail)
+		aR.POST("/create", cont.Create)
+		aR.POST("/update", cont.Update)
+		aR.POST("/delete", cont.Delete)
+		aR.POST("/assign", cont.Assign)
+		aR.GET("/assignments/:id", cont.Assignments)
 	}
 }
 

@@ -24,7 +24,7 @@ func NewPostgresql(conf *PostgresqlConfig, logwriter logger.Writer) *gorm.DB {
 				LogLevel:      logger.Warn, // Log level
 				//IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
 				ParameterizedQueries: true, // Don't include params in the SQL log
-				Colorful:             true,
+				Colorful:             false,
 			},
 		),
 	})

@@ -63,6 +63,7 @@ logger:
   path: "./runtime/log.txt"
   level: "debug" #trace,debug,info,warn,error,fatal
   report-caller: true
+  log-heartbeat: false # true: 印出 heartbeat 請求的 LOG, false: 不印
 
 proxy:
   enable: false
