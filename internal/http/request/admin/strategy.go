@@ -20,9 +20,9 @@ func (sf *StrategyForm) ToStrategy() *model.Strategy {
 	s.Id = sf.Id
 	s.Name = sf.Name
 	if sf.Enabled != nil {
-		s.Enabled = *sf.Enabled
+		s.Enabled = sf.Enabled
 	} else {
-		s.Enabled = true
+		s.Enabled = model.BoolPtr(true)
 	}
 	if sf.ConfigOptions != nil {
 		b, _ := json.Marshal(sf.ConfigOptions)

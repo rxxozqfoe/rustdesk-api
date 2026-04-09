@@ -28,14 +28,14 @@ func (j *AutoJson) Scan(value interface{}) error {
 	//}
 
 	if bytes == nil || len(bytes) == 0 {
-		*j = AutoJson(json.RawMessage{'[', ']'})
+		*j = AutoJson(json.RawMessage{'{', '}'})
 		return nil
 	}
 	result := &json.RawMessage{}
 	err := json.Unmarshal(bytes, result)
 	//解析json错误 返回空
 	if err != nil {
-		*j = AutoJson(json.RawMessage{'[', ']'})
+		*j = AutoJson(json.RawMessage{'{', '}'})
 		return nil
 	}
 	*j = AutoJson(*result)

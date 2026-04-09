@@ -7,11 +7,14 @@ type Strategy struct {
 	IdModel
 	Guid          string                `json:"guid" gorm:"type:varchar(36);uniqueIndex;not null"`
 	Name          string                `json:"name" gorm:"type:varchar(255);uniqueIndex;not null"`
-	Enabled       bool                  `json:"enabled" gorm:"default:true;not null"`
+	Enabled       *bool                 `json:"enabled" gorm:"not null"`
 	ConfigOptions custom_types.AutoJson `json:"config_options" gorm:"type:text" swaggertype:"object"`
 	Extra         custom_types.AutoJson `json:"extra" gorm:"type:text" swaggertype:"object"`
 	TimeModel
 }
+
+// BoolPtr is a helper to create a *bool for struct literals.
+func BoolPtr(b bool) *bool { return &b }
 
 type StrategyList struct {
 	Strategies []*Strategy `json:"list"`

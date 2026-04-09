@@ -53,6 +53,9 @@ func (ss *StrategyService) ListAll() []*model.Strategy {
 // Create inserts a new strategy, generating a GUID automatically.
 func (ss *StrategyService) Create(s *model.Strategy) error {
 	s.Guid = uuid.New().String()
+	if s.Enabled == nil {
+		s.Enabled = model.BoolPtr(true)
+	}
 	if len(s.ConfigOptions) == 0 {
 		s.ConfigOptions = emptyJsonObject
 	}
@@ -91,7 +94,9 @@ func (ss *StrategyService) SetEnabled(id uint, enabled bool) error {
 // AssignToPeer assigns a strategy to a peer. Removes any prior assignment for this peer.
 func (ss *StrategyService) AssignToPeer(strategyId, peerRowId uint) error {
 	return ss.ctx.DB.Transaction(func(tx *gorm.DB) error {
-		tx.Where("peer_row_id = ?", peerRowId).Delete(&model.StrategyPeer{})
+		if err := tx.Where("peer_row_id = ?", peerRowId).Delete(&model.StrategyPeer{}).Error; err != nil {
+			return err
+		}
 		return tx.Create(&model.StrategyPeer{
 			StrategyId: strategyId,
 			PeerRowId:  peerRowId,
@@ -102,7 +107,9 @@ func (ss *StrategyService) AssignToPeer(strategyId, peerRowId uint) error {
 // AssignToUser assigns a strategy to a user. Removes any prior assignment for this user.
 func (ss *StrategyService) AssignToUser(strategyId, userId uint) error {
 	return ss.ctx.DB.Transaction(func(tx *gorm.DB) error {
-		tx.Where("user_id = ?", userId).Delete(&model.StrategyUser{})
+		if err := tx.Where("user_id = ?", userId).Delete(&model.StrategyUser{}).Error; err != nil {
+			return err
+		}
 		return tx.Create(&model.StrategyUser{
 			StrategyId: strategyId,
 			UserId:     userId,
@@ -113,7 +120,9 @@ func (ss *StrategyService) AssignToUser(strategyId, userId uint) error {
 // AssignToDeviceGroup assigns a strategy to a device group. Removes any prior assignment.
 func (ss *StrategyService) AssignToDeviceGroup(strategyId, deviceGroupId uint) error {
 	return ss.ctx.DB.Transaction(func(tx *gorm.DB) error {
-		tx.Where("device_group_id = ?", deviceGroupId).Delete(&model.StrategyDeviceGroup{})
+		if err := tx.Where("device_group_id = ?", deviceGroupId).Delete(&model.StrategyDeviceGroup{}).Error; err != nil {
+			return err
+		}
 		return tx.Create(&model.StrategyDeviceGroup{
 			StrategyId:    strategyId,
 			DeviceGroupId: deviceGroupId,
@@ -175,6 +184,27 @@ func (ss *StrategyService) ResolveForPeer(peer *model.Peer) *model.Strategy {
 	}
 
 	return nil
+}
+
+// PeerAssignments returns all StrategyPeer records for a given strategy.
+func (ss *StrategyService) PeerAssignments(strategyId uint) []model.StrategyPeer {
+	var sps []model.StrategyPeer
+	ss.ctx.DB.Where("strategy_id = ?", strategyId).Find(&sps)
+	return sps
+}
+
+// UserAssignments returns all StrategyUser records for a given strategy.
+func (ss *StrategyService) UserAssignments(strategyId uint) []model.StrategyUser {
+	var sus []model.StrategyUser
+	ss.ctx.DB.Where("strategy_id = ?", strategyId).Find(&sus)
+	return sus
+}
+
+// DeviceGroupAssignments returns all StrategyDeviceGroup records for a given strategy.
+func (ss *StrategyService) DeviceGroupAssignments(strategyId uint) []model.StrategyDeviceGroup {
+	var sdgs []model.StrategyDeviceGroup
+	ss.ctx.DB.Where("strategy_id = ?", strategyId).Find(&sdgs)
+	return sdgs
 }
 
 // ConfigOptionsMap deserializes ConfigOptions from AutoJson to map[string]string.
