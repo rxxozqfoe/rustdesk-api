@@ -47,9 +47,10 @@ type Config struct {
 	Cache      Cache
 	Oss        Oss
 	Jwt        Jwt
-	Rustdesk   Rustdesk
-	Proxy      Proxy
-	Ldap       Ldap
+	Rustdesk     Rustdesk
+	Proxy        Proxy
+	Ldap         Ldap
+	CustomClient CustomClient `mapstructure:"custom-client"`
 }
 
 func (a *Admin) Init() {
@@ -100,6 +101,7 @@ func Init(rowVal *Config, path string) *viper.Viper {
 	}
 	rowVal.Rustdesk.LoadKeyFile()
 	rowVal.Admin.Init()
+	rowVal.CustomClient.Init()
 	return v
 }
 

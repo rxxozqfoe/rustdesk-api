@@ -25,7 +25,7 @@ GO_ENV := GO111MODULE=on \
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH)
 
-.PHONY: all build clean docs resources dirs help
+.PHONY: all build clean docs resources dirs help generate-keypair
 
 all: build
 
@@ -69,3 +69,6 @@ resources: dirs
 dirs:
 	mkdir -p $(RELEASE_DIR)/data
 	mkdir -p $(RELEASE_DIR)/runtime
+
+generate-keypair:
+	@go run scripts/generate_keypair.go
