@@ -261,6 +261,11 @@ func InitApp() {
 	// Database migration (explicit params — no globals)
 	DatabaseAutoUpdate(db, a, svcs, localizer)
 
+	// Close stale audit connections from previous server runs
+	if err := svcs.AuditService.CloseStaleConns(); err != nil {
+		a.Logger.Errorf("failed to close stale audit connections: %v", err)
+	}
+
 	// Publish to package-level wiring vars so cobra commands can reach them.
 	appCtx = a
 	services = svcs

@@ -12,3 +12,8 @@ type AuditConnLogIds struct {
 type AuditFileLogIds struct {
 	Ids []uint `json:"ids" validate:"required"`
 }
+
+type AuditConnDisconnectForm struct {
+	PeerId  string `json:"peer_id" validate:"required"`
+	ConnIds []int  `json:"conn_ids" validate:"required"`
+}

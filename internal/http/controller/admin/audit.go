@@ -112,6 +112,40 @@ func (a *Audit) BatchConnDelete(c *gin.Context) {
 	return
 }
 
+// ConnDisconnect 断开连接
+// @Tags 链接日志
+// @Summary 断开连接
+// @Description 通过peer_id和conn_id断开活跃连接
+// @Accept  json
+// @Produce  json
+// @Param body body admin.AuditConnDisconnectForm true "断开连接信息"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /admin/audit_conn/disconnect [post]
+// @Security token
+func (a *Audit) ConnDisconnect(c *gin.Context) {
+	f := &admin.AuditConnDisconnectForm{}
+	if err := c.ShouldBindJSON(f); err != nil {
+		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
+		return
+	}
+	errList := a.HD.Validator.ValidVar(c, f.PeerId, "required")
+	if len(errList) > 0 {
+		response.Fail(c, 101, errList[0])
+		return
+	}
+	if len(f.ConnIds) == 0 {
+		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
+		return
+	}
+	err := a.HD.Services.PeerCommandService.CreateDisconnect(f.PeerId, f.ConnIds)
+	if err != nil {
+		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
+		return
+	}
+	response.Success(c, nil)
+}
+
 // FileList 列表
 // @Tags 文件日志
 // @Summary 文件日志列表

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 	"gorm.io/gorm"
 )
@@ -48,6 +50,16 @@ func (as *AuditService) FileInfoById(id uint) (res *model.AuditFile) {
 	res = &model.AuditFile{}
 	as.ctx.DB.Where("id = ?", id).First(res)
 	return
+}
+
+// CloseStaleConns closes all audit connections that were never properly closed
+// (close_time = 0). This should be called on server startup because any
+// connections from a previous run cannot still be active.
+func (as *AuditService) CloseStaleConns() error {
+	return as.ctx.DB.Model(&model.AuditConn{}).
+		Where("close_time = ?", 0).
+		Update("close_time", time.Now().Unix()).
+		Error
 }
 
 func (as *AuditService) AuditFileList(page, pageSize uint, where func(tx *gorm.DB)) *model.AuditFileList {
