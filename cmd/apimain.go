@@ -7,23 +7,26 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/lejianwen/rustdesk-api/v2/config"
-	"github.com/lejianwen/rustdesk-api/v2/global"
-	"github.com/lejianwen/rustdesk-api/v2/http"
-	"github.com/lejianwen/rustdesk-api/v2/lib/cache"
-	"github.com/lejianwen/rustdesk-api/v2/lib/jwt"
-	"github.com/lejianwen/rustdesk-api/v2/lib/lock"
-	"github.com/lejianwen/rustdesk-api/v2/lib/logger"
-	"github.com/lejianwen/rustdesk-api/v2/lib/orm"
-	"github.com/lejianwen/rustdesk-api/v2/lib/upload"
-	"github.com/lejianwen/rustdesk-api/v2/model"
-	"github.com/lejianwen/rustdesk-api/v2/service"
-	"github.com/lejianwen/rustdesk-api/v2/utils"
+	"github.com/lejianwen/rustdesk-api/v2/internal/app"
+	"github.com/lejianwen/rustdesk-api/v2/internal/config"
+	apphttp "github.com/lejianwen/rustdesk-api/v2/internal/http"
+	"github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
+	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/cache"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/jwt"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/orm"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/upload"
+	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	"github.com/lejianwen/rustdesk-api/v2/internal/service"
+	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
-const DatabaseVersion = 265
+const DatabaseVersion = 266
 
 // @title 管理系统API
 // @version 1.0
@@ -36,15 +39,29 @@ const DatabaseVersion = 265
 // @in header
 // @name Authorization
 
+var configPath string
+
+// Wiring — populated by InitApp (this file is the composition root). These
+// package-level vars hold the fully constructed dependency graph so both the
+// HTTP server and the cobra reset commands can reach them. They are not
+// globals in the architectural sense: `main` is the only package that touches
+// them, and `InitApp` is the only place that assigns them.
+var (
+	appCtx    *app.AppContext
+	services  *service.Service
+	handlers  *deps.HandlerDeps
+	localizer app.LocalizerFunc
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "apimain",
 	Short: "RUSTDESK API SERVER",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		InitGlobal()
+		InitApp()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		global.Logger.Info("API SERVER START")
-		http.ApiInit()
+		appCtx.Logger.Info("API SERVER START")
+		apphttp.ApiInit(handlers)
 	},
 }
 
@@ -55,19 +72,19 @@ var resetPwdCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pwd := args[0]
-		admin := service.AllService.UserService.InfoById(1)
+		admin := services.UserService.InfoById(1)
 		if admin.Id == 0 {
-			global.Logger.Warn("user not found! ")
+			appCtx.Logger.Warn("user not found! ")
 			return
 		}
-		err := service.AllService.UserService.UpdatePassword(admin, pwd)
-		if err != nil {
-			global.Logger.Error("reset password fail! ", err)
+		if err := services.UserService.UpdatePassword(admin, pwd); err != nil {
+			appCtx.Logger.Error("reset password fail! ", err)
 			return
 		}
-		global.Logger.Info("reset password success! ")
+		appCtx.Logger.Info("reset password success! ")
 	},
 }
+
 var resetUserPwdCmd = &cobra.Command{
 	Use:     "reset-pwd [userId] [pwd]",
 	Example: "reset-pwd 2 123456",
@@ -78,200 +95,230 @@ var resetUserPwdCmd = &cobra.Command{
 		pwd := args[1]
 		uid, err := strconv.Atoi(userId)
 		if err != nil {
-			global.Logger.Warn("userId must be int!")
+			appCtx.Logger.Warn("userId must be int!")
 			return
 		}
 		if uid <= 0 {
-			global.Logger.Warn("userId must be greater than 0! ")
+			appCtx.Logger.Warn("userId must be greater than 0! ")
 			return
 		}
-		u := service.AllService.UserService.InfoById(uint(uid))
+		u := services.UserService.InfoById(uint(uid))
 		if u.Id == 0 {
-			global.Logger.Warn("user not found! ")
+			appCtx.Logger.Warn("user not found! ")
 			return
 		}
-		err = service.AllService.UserService.UpdatePassword(u, pwd)
-		if err != nil {
-			global.Logger.Warn("reset password fail! ", err)
+		if err := services.UserService.UpdatePassword(u, pwd); err != nil {
+			appCtx.Logger.Warn("reset password fail! ", err)
 			return
 		}
-		global.Logger.Info("reset password success!")
+		appCtx.Logger.Info("reset password success!")
 	},
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&global.ConfigPath, "config", "c", "./conf/config.yaml", "choose config file")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "conf/config.yaml", "choose config file")
 	rootCmd.AddCommand(resetPwdCmd, resetUserPwdCmd)
 }
+
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		global.Logger.Error(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func InitGlobal() {
-	//配置解析
-	global.Viper = config.Init(&global.Config, global.ConfigPath)
+// InitApp is the composition root. It builds AppContext, constructs every
+// dependency explicitly, wires the service aggregate, assembles HandlerDeps,
+// and runs the database migration. No package-level singletons are set.
+func InitApp() {
+	a := &app.AppContext{ConfigPath: configPath}
 
-	//日志
-	global.Logger = logger.New(&logger.Config{
-		Path:         global.Config.Logger.Path,
-		Level:        global.Config.Logger.Level,
-		ReportCaller: global.Config.Logger.ReportCaller,
+	// Config
+	a.Viper = config.Init(&a.Config, a.ConfigPath)
+
+	// Logger
+	a.Logger = logger.New(&logger.Config{
+		Path:         a.Config.Logger.Path,
+		Level:        a.Config.Logger.Level,
+		ReportCaller: a.Config.Logger.ReportCaller,
 	})
 
-	global.InitI18n()
+	// I18n localizer (constructor — returns a value, no global mutation)
+	localizer = app.NewI18n(&a.Config)
 
-	//redis
-	global.Redis = redis.NewClient(&redis.Options{
-		Addr:     global.Config.Redis.Addr,
-		Password: global.Config.Redis.Password,
-		DB:       global.Config.Redis.Db,
+	// Validator
+	validator := app.NewValidator(&a.Config)
+
+	// Redis
+	a.Redis = redis.NewClient(&redis.Options{
+		Addr:     a.Config.Redis.Addr,
+		Password: a.Config.Redis.Password,
+		DB:       a.Config.Redis.Db,
 	})
 
-	//cache
-	if global.Config.Cache.Type == cache.TypeFile {
+	// Cache
+	switch a.Config.Cache.Type {
+	case cache.TypeFile:
 		fc := cache.NewFileCache()
-		fc.SetDir(global.Config.Cache.FileDir)
-		global.Cache = fc
-	} else if global.Config.Cache.Type == cache.TypeRedis {
-		global.Cache = cache.NewRedis(&redis.Options{
-			Addr:     global.Config.Cache.RedisAddr,
-			Password: global.Config.Cache.RedisPwd,
-			DB:       global.Config.Cache.RedisDb,
+		fc.SetDir(a.Config.Cache.FileDir)
+		a.Cache = fc
+	case cache.TypeRedis:
+		a.Cache = cache.NewRedis(&redis.Options{
+			Addr:     a.Config.Cache.RedisAddr,
+			Password: a.Config.Cache.RedisPwd,
+			DB:       a.Config.Cache.RedisDb,
 		})
 	}
-	//gorm
-	if global.Config.Gorm.Type == config.TypeMysql {
 
+	// Database
+	var db *gorm.DB
+	switch a.Config.Gorm.Type {
+	case config.TypeMysql:
 		dsn := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=%s",
-			global.Config.Mysql.Username,
-			global.Config.Mysql.Password,
-			global.Config.Mysql.Addr,
-			global.Config.Mysql.Dbname,
-			global.Config.Mysql.Tls,
+			a.Config.Mysql.Username,
+			a.Config.Mysql.Password,
+			a.Config.Mysql.Addr,
+			a.Config.Mysql.Dbname,
+			a.Config.Mysql.Tls,
 		)
-
-		global.DB = orm.NewMysql(&orm.MysqlConfig{
+		db = orm.NewMysql(&orm.MysqlConfig{
 			Dsn:          dsn,
-			MaxIdleConns: global.Config.Gorm.MaxIdleConns,
-			MaxOpenConns: global.Config.Gorm.MaxOpenConns,
-		}, global.Logger)
-	} else if global.Config.Gorm.Type == config.TypePostgresql {
+			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
+			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
+		}, a.Logger)
+
+	case config.TypePostgresql:
 		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=%s",
-			global.Config.Postgresql.Host,
-			global.Config.Postgresql.Port,
-			global.Config.Postgresql.User,
-			global.Config.Postgresql.Password,
-			global.Config.Postgresql.Dbname,
-			global.Config.Postgresql.Sslmode,
-			global.Config.Postgresql.TimeZone,
+			a.Config.Postgresql.Host,
+			a.Config.Postgresql.Port,
+			a.Config.Postgresql.User,
+			a.Config.Postgresql.Password,
+			a.Config.Postgresql.Dbname,
+			a.Config.Postgresql.Sslmode,
+			a.Config.Postgresql.TimeZone,
 		)
-		global.DB = orm.NewPostgresql(&orm.PostgresqlConfig{
+		db = orm.NewPostgresql(&orm.PostgresqlConfig{
 			Dsn:          dsn,
-			MaxIdleConns: global.Config.Gorm.MaxIdleConns,
-			MaxOpenConns: global.Config.Gorm.MaxOpenConns,
-		}, global.Logger)
-	} else {
-		//sqlite
-		global.DB = orm.NewSqlite(&orm.SqliteConfig{
-			MaxIdleConns: global.Config.Gorm.MaxIdleConns,
-			MaxOpenConns: global.Config.Gorm.MaxOpenConns,
-		}, global.Logger)
+			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
+			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
+		}, a.Logger)
+
+	case config.TypeSqlite:
+		db = orm.NewSqlite(&orm.SqliteConfig{
+			Path:         a.Config.Sqlite.Path,
+			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
+			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
+		}, a.Logger)
+
+	default:
+		a.Logger.Fatalf("unsupported database type: %s", a.Config.Gorm.Type)
 	}
 
-	//validator
-	global.ApiInitValidator()
-
-	//oss
-	global.Oss = &upload.Oss{
-		AccessKeyId:     global.Config.Oss.AccessKeyId,
-		AccessKeySecret: global.Config.Oss.AccessKeySecret,
-		Host:            global.Config.Oss.Host,
-		CallbackUrl:     global.Config.Oss.CallbackUrl,
-		ExpireTime:      global.Config.Oss.ExpireTime,
-		MaxByte:         global.Config.Oss.MaxByte,
+	// OSS
+	oss := &upload.Oss{
+		AccessKeyId:     a.Config.Oss.AccessKeyId,
+		AccessKeySecret: a.Config.Oss.AccessKeySecret,
+		Host:            a.Config.Oss.Host,
+		CallbackUrl:     a.Config.Oss.CallbackUrl,
+		ExpireTime:      a.Config.Oss.ExpireTime,
+		MaxByte:         a.Config.Oss.MaxByte,
 	}
 
-	//jwt
-	//fmt.Println(global.Config.Jwt.PrivateKey)
-	global.Jwt = jwt.NewJwt(global.Config.Jwt.Key, global.Config.Jwt.ExpireDuration)
-	//locker
-	global.Lock = lock.NewLocal()
+	// JWT & Lock
+	jwtHandler := jwt.NewJwt(a.Config.Jwt.Key, a.Config.Jwt.ExpireDuration)
+	locker := lock.NewLocal()
 
-	//service
-	service.New(&global.Config, global.DB, global.Logger, global.Jwt, global.Lock)
+	// Service aggregate (with back-pointer — see service.New)
+	svcs := service.New(&a.Config, db, a.Logger, jwtHandler, locker)
 
-	global.LoginLimiter = utils.NewLoginLimiter(utils.SecurityPolicy{
-		CaptchaThreshold: global.Config.App.CaptchaThreshold,
-		BanThreshold:     global.Config.App.BanThreshold,
+	// Login limiter (HTTP-layer concern)
+	a.Logger.Info(fmt.Sprintf("CaptchaThreshold: %d, BanThreshold: %d", a.Config.App.CaptchaThreshold, a.Config.App.BanThreshold))
+	limiter := utils.NewLoginLimiter(utils.SecurityPolicy{
+		CaptchaThreshold: a.Config.App.CaptchaThreshold,
+		BanThreshold:     a.Config.App.BanThreshold,
 		AttemptsWindow:   10 * time.Minute,
 		BanDuration:      30 * time.Minute,
 	})
-	global.LoginLimiter.RegisterProvider(utils.B64StringCaptchaProvider{})
-	DatabaseAutoUpdate()
+	limiter.RegisterProvider(utils.B64StringCaptchaProvider{})
+
+	// HandlerDeps — the aggregate threaded into every HTTP controller,
+	// middleware, and router bind function.
+	hd := &deps.HandlerDeps{
+		Config:       &a.Config,
+		Logger:       a.Logger,
+		Validator:    validator,
+		Localizer:    deps.LocalizerFunc(localizer),
+		LoginLimiter: limiter,
+		Oss:          oss,
+		Services:     svcs,
+	}
+
+	// Wire http/response's single permitted func-pointer hooks so
+	// TranslateMsg and friends work without pulling from a global.
+	response.SetLocalizer(func(lang string) *i18n.Localizer { return localizer(lang) })
+	response.SetLogger(a.Logger)
+
+	// Database migration (explicit params — no globals)
+	DatabaseAutoUpdate(db, a, svcs, localizer)
+
+	// Close stale audit connections from previous server runs
+	if err := svcs.AuditService.CloseStaleConns(); err != nil {
+		a.Logger.Errorf("failed to close stale audit connections: %v", err)
+	}
+
+	// Publish to package-level wiring vars so cobra commands can reach them.
+	appCtx = a
+	services = svcs
+	handlers = hd
 }
 
-func DatabaseAutoUpdate() {
+func DatabaseAutoUpdate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer app.LocalizerFunc) {
 	version := DatabaseVersion
 
-	db := global.DB
-
-	if global.Config.Gorm.Type == config.TypeMysql {
-		//检查存不存在数据库，不存在则创建
+	if a.Config.Gorm.Type == config.TypeMysql {
 		dbName := db.Migrator().CurrentDatabase()
 		if dbName == "" {
-			dbName = global.Config.Mysql.Dbname
-			// 移除 DSN 中的数据库名称，以便初始连接时不指定数据库
+			dbName = a.Config.Mysql.Dbname
 			dsnWithoutDB := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-				global.Config.Mysql.Username,
-				global.Config.Mysql.Password,
-				global.Config.Mysql.Addr,
+				a.Config.Mysql.Username,
+				a.Config.Mysql.Password,
+				a.Config.Mysql.Addr,
 				"",
 			)
-
-			//新链接
 			dbWithoutDB := orm.NewMysql(&orm.MysqlConfig{
 				Dsn: dsnWithoutDB,
-			}, global.Logger)
-			// 获取底层的 *sql.DB 对象，并确保在程序退出时关闭连接
+			}, a.Logger)
 			sqlDBWithoutDB, err := dbWithoutDB.DB()
 			if err != nil {
-				global.Logger.Errorf("获取底层 *sql.DB 对象失败: %v", err)
+				a.Logger.Errorf("获取底层 *sql.DB 对象失败: %v", err)
 				return
 			}
 			defer func() {
 				if err := sqlDBWithoutDB.Close(); err != nil {
-					global.Logger.Errorf("关闭连接失败: %v", err)
+					a.Logger.Errorf("关闭连接失败: %v", err)
 				}
 			}()
 
-			err = dbWithoutDB.Exec("CREATE DATABASE IF NOT EXISTS " + dbName + " DEFAULT CHARSET utf8mb4").Error
-			if err != nil {
-				global.Logger.Error(err)
+			if err := dbWithoutDB.Exec("CREATE DATABASE IF NOT EXISTS " + dbName + " DEFAULT CHARSET utf8mb4").Error; err != nil {
+				a.Logger.Error(err)
 				return
 			}
 		}
 	}
 
 	if !db.Migrator().HasTable(&model.Version{}) {
-		Migrate(uint(version))
+		Migrate(db, a, svcs, localizer, uint(version))
 	} else {
-		//查找最后一个version
 		var v model.Version
 		db.Last(&v)
 		if v.Version < uint(version) {
-			Migrate(uint(version))
+			Migrate(db, a, svcs, localizer, uint(version))
 		}
 
-		// 245迁移
 		if v.Version < 245 {
-			//oauths 表的 oauth_type 字段设置为 op同样的值
 			db.Exec("update oauths set oauth_type = op")
 			db.Exec("update oauths set issuer = 'https://accounts.google.com' where op = 'google'")
 			db.Exec("update user_thirds set oauth_type = third_type, op = third_type")
-			//通过email迁移旧的google授权
 			uts := make([]model.UserThird, 0)
 			db.Where("oauth_type = ?", "google").Find(&uts)
 			for _, ut := range uts {
@@ -284,11 +331,11 @@ func DatabaseAutoUpdate() {
 			db.Exec("update oauths set issuer = 'https://accounts.google.com' where op = 'google' and issuer is null")
 		}
 	}
-
 }
-func Migrate(version uint) {
-	global.Logger.Info("Migrating....", version)
-	err := global.DB.AutoMigrate(
+
+func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer app.LocalizerFunc, version uint) {
+	a.Logger.Info("Migrating....", version)
+	err := db.AutoMigrate(
 		&model.Version{},
 		&model.User{},
 		&model.UserToken{},
@@ -306,52 +353,47 @@ func Migrate(version uint) {
 		&model.AddressBookCollectionRule{},
 		&model.ServerCmd{},
 		&model.DeviceGroup{},
+		&model.PeerCommand{},
+		&model.Strategy{},
+		&model.StrategyPeer{},
+		&model.StrategyUser{},
+		&model.StrategyDeviceGroup{},
 	)
 	if err != nil {
-		global.Logger.Error("migrate err :=>", err)
+		a.Logger.Error("migrate err :=>", err)
 	}
-	global.DB.Create(&model.Version{Version: version})
-	//如果是初次则创建一个默认用户
+	db.Create(&model.Version{Version: version})
 	var vc int64
-	global.DB.Model(&model.Version{}).Count(&vc)
+	db.Model(&model.Version{}).Count(&vc)
 	if vc == 1 {
-		localizer := global.Localizer("")
-		defaultGroup, _ := localizer.LocalizeMessage(&i18n.Message{
-			ID: "DefaultGroup",
-		})
-		group := &model.Group{
+		loc := localizer("")
+		defaultGroup, _ := loc.LocalizeMessage(&i18n.Message{ID: "DefaultGroup"})
+		svcs.GroupService.Create(&model.Group{
 			Name: defaultGroup,
 			Type: model.GroupTypeDefault,
-		}
-		service.AllService.GroupService.Create(group)
-
-		shareGroup, _ := localizer.LocalizeMessage(&i18n.Message{
-			ID: "ShareGroup",
 		})
-		groupShare := &model.Group{
+
+		shareGroup, _ := loc.LocalizeMessage(&i18n.Message{ID: "ShareGroup"})
+		svcs.GroupService.Create(&model.Group{
 			Name: shareGroup,
 			Type: model.GroupTypeShare,
-		}
-		service.AllService.GroupService.Create(groupShare)
-		//是true
-		is_admin := true
+		})
+
+		isAdmin := true
 		admin := &model.User{
 			Username: "admin",
 			Nickname: "Admin",
 			Status:   model.COMMON_STATUS_ENABLE,
-			IsAdmin:  &is_admin,
+			IsAdmin:  &isAdmin,
 			GroupId:  1,
 		}
-
-		// 生成随机密码
 		pwd := utils.RandomString(8)
-		global.Logger.Info("Admin Password Is: ", pwd)
-		var err error
-		admin.Password, err = utils.EncryptPassword(pwd)
-		if err != nil {
-			global.Logger.Fatalf("failed to generate admin password: %v", err)
+		a.Logger.Info("Admin Password Is: ", pwd)
+		var pwdErr error
+		admin.Password, pwdErr = utils.EncryptPassword(pwd)
+		if pwdErr != nil {
+			a.Logger.Fatalf("failed to generate admin password: %v", pwdErr)
 		}
-		global.DB.Create(admin)
+		db.Create(admin)
 	}
-
 }
