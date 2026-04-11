@@ -50,9 +50,8 @@ type Config struct {
 	Rustdesk     Rustdesk
 	Proxy        Proxy
 	Ldap         Ldap
-	CustomClient CustomClient `mapstructure:"custom-client"`
-	S3           S3           `mapstructure:"s3"`
-	Worker       Worker       `mapstructure:"worker"`
+	S3     S3     `mapstructure:"s3"`
+	Worker Worker `mapstructure:"worker"`
 }
 
 func (a *Admin) Init() {
@@ -103,7 +102,6 @@ func Init(rowVal *Config, path string) *viper.Viper {
 	}
 	rowVal.Rustdesk.LoadKeyFile()
 	rowVal.Admin.Init()
-	rowVal.CustomClient.Init()
 	return v
 }
 

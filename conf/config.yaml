@@ -73,10 +73,6 @@ jwt:
   key: ""
   expire-duration: 168h
 
-custom-client:
-  # Build execution is handled by the build-worker service.
-  # Configure worker.token and worker.base-url to enable.
-
 s3:
   endpoint: "" # e.g. "minio:9000" or "s3.amazonaws.com" (empty = disabled)
   access-key: ""
