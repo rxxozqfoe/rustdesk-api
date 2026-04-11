@@ -1,10 +1,7 @@
 package service
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -22,9 +19,15 @@ func (s *BuildArtifactService) InfoById(id uint) *model.BuildArtifact {
 	return ba
 }
 
-func (s *BuildArtifactService) FindByPlatformArchFormat(platform, arch, format string) *model.BuildArtifact {
+func (s *BuildArtifactService) FindByPlatformArchVersion(platform, arch, version string) *model.BuildArtifact {
 	ba := &model.BuildArtifact{}
-	s.ctx.DB.Where("platform = ? AND arch = ? AND format = ?", platform, arch, format).First(ba)
+	s.ctx.DB.Where("platform = ? AND arch = ? AND version = ?", platform, arch, version).First(ba)
+	return ba
+}
+
+func (s *BuildArtifactService) FindByPlatformArch(platform, arch string) *model.BuildArtifact {
+	ba := &model.BuildArtifact{}
+	s.ctx.DB.Where("platform = ? AND arch = ?", platform, arch).Order("created_at DESC").First(ba)
 	return ba
 }
 
@@ -39,62 +42,49 @@ func (s *BuildArtifactService) Create(ba *model.BuildArtifact) error {
 }
 
 func (s *BuildArtifactService) Delete(ba *model.BuildArtifact) error {
-	// Remove the file from disk if it exists
-	if ba.FilePath != "" {
-		os.Remove(ba.FilePath)
+	if ba.DirPath != "" {
+		os.RemoveAll(ba.DirPath)
 	}
 	return s.ctx.DB.Delete(ba).Error
 }
 
-// SaveUploadedFile saves an uploaded file to the base-binaries directory and creates a DB record.
-func (s *BuildArtifactService) SaveUploadedFile(src io.Reader, filename, platform, arch, format, version string) (*model.BuildArtifact, error) {
-	baseDir := s.ctx.Config.CustomClient.BaseBinariesDir
-	targetDir := filepath.Join(baseDir, fmt.Sprintf("%s-%s-%s", platform, arch, format))
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create directory: %w", err)
+// RegisterBuildFolder registers a build output folder as a BuildArtifact.
+// Upserts: if same platform+arch+version exists, updates it.
+func (s *BuildArtifactService) RegisterBuildFolder(platform, arch, version, dirPath, source string) (*model.BuildArtifact, error) {
+	if _, err := os.Stat(dirPath); err != nil {
+		return nil, fmt.Errorf("build output folder does not exist: %s", dirPath)
 	}
 
-	targetPath := filepath.Join(targetDir, filename)
-	dst, err := os.Create(targetPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file: %w", err)
-	}
-	defer dst.Close()
-
-	hasher := sha256.New()
-	writer := io.MultiWriter(dst, hasher)
-	size, err := io.Copy(writer, src)
-	if err != nil {
-		os.Remove(targetPath)
-		return nil, fmt.Errorf("failed to write file: %w", err)
-	}
-
-	hash := hex.EncodeToString(hasher.Sum(nil))
-
-	// Upsert: if same platform+arch+format exists, update it
-	existing := s.FindByPlatformArchFormat(platform, arch, format)
+	existing := s.FindByPlatformArchVersion(platform, arch, version)
 	if existing.Id > 0 {
-		// Remove old file
-		if existing.FilePath != "" && existing.FilePath != targetPath {
-			os.Remove(existing.FilePath)
+		if existing.DirPath != dirPath && existing.DirPath != "" {
+			os.RemoveAll(existing.DirPath)
 		}
-		existing.Version = version
-		existing.FilePath = targetPath
-		existing.FileSize = size
-		existing.Sha256 = hash
-		existing.Source = "uploaded"
+		existing.DirPath = dirPath
+		existing.Source = source
 		return existing, s.ctx.DB.Save(existing).Error
 	}
 
-	ba := &model.BuildArtifact{
+	artifact := &model.BuildArtifact{
 		Platform: platform,
 		Arch:     arch,
-		Format:   format,
 		Version:  version,
-		FilePath: targetPath,
-		FileSize: size,
-		Sha256:   hash,
-		Source:   "uploaded",
+		DirPath:  dirPath,
+		Source:   source,
 	}
-	return ba, s.Create(ba)
+	return artifact, s.Create(artifact)
+}
+
+// GetBuildOutputDir returns the expected Flutter build output directory path.
+func GetBuildOutputDir(worktreeDir, platform string) string {
+	switch platform {
+	case "linux":
+		return filepath.Join(worktreeDir, "flutter", "build", "linux", "x64", "release", "bundle")
+	case "windows":
+		return filepath.Join(worktreeDir, "flutter", "build", "windows", "x64", "runner", "Release")
+	case "macos":
+		return filepath.Join(worktreeDir, "flutter", "build", "macos", "Build", "Products", "Release")
+	default:
+		return filepath.Join(worktreeDir, "flutter", "build")
+	}
 }

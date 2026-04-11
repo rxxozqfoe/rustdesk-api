@@ -17,7 +17,10 @@ type CustomClientForm struct {
 	RelayServer      string            `json:"relay_server"`
 	DefaultSettings  map[string]string `json:"default_settings"`
 	OverrideSettings map[string]string `json:"override_settings"`
-	Enabled          *bool             `json:"enabled"`
+	Platform         string            `json:"platform" validate:"required"`
+	Arch             string            `json:"arch" validate:"required"`
+	Version          string            `json:"version" validate:"required"`
+	Format           string            `json:"format" validate:"required"`
 }
 
 func (f *CustomClientForm) ToCustomClient() *model.CustomClient {
@@ -29,11 +32,10 @@ func (f *CustomClientForm) ToCustomClient() *model.CustomClient {
 	cc.ServerKey = f.ServerKey
 	cc.ApiServer = f.ApiServer
 	cc.RelayServer = f.RelayServer
-	if f.Enabled != nil {
-		cc.Enabled = f.Enabled
-	} else {
-		cc.Enabled = model.BoolPtr(true)
-	}
+	cc.Platform = f.Platform
+	cc.Arch = f.Arch
+	cc.Version = f.Version
+	cc.Format = f.Format
 	if f.DefaultSettings != nil {
 		b, _ := json.Marshal(f.DefaultSettings)
 		cc.DefaultSettings = custom_types.AutoJson(b)

@@ -48,7 +48,7 @@ func Init(g *gin.Engine, hd *deps.HandlerDeps) {
 	StrategyBind(adg, hd)
 	CustomClientBind(adg, hd)
 	BuildArtifactBind(adg, hd)
-	BuildJobBind(adg, hd)
+	PreBuildBind(adg, hd)
 }
 
 func RustdeskCmdBind(adg *gin.RouterGroup, hd *deps.HandlerDeps) {
@@ -339,16 +339,14 @@ func ShareRecordBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 func CustomClientBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 	users := hd.Services.UserService
 	cont := &admin.CustomClient{HD: hd}
-	baCont := &admin.BuildArtifact{HD: hd}
 	aR := rg.Group("/custom-client").Use(middleware.AdminPrivilege(users))
 	{
 		aR.GET("/list", cont.List)
 		aR.GET("/detail/:id", cont.Detail)
 		aR.POST("/create", cont.Create)
-		aR.POST("/update", cont.Update)
 		aR.POST("/delete", cont.Delete)
 		aR.GET("/preview/:id", cont.Preview)
-		aR.GET("/download/:id", baCont.Download)
+		aR.GET("/download/:id", cont.Download)
 	}
 }
 
@@ -358,15 +356,14 @@ func BuildArtifactBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 	aR := rg.Group("/build-artifact").Use(middleware.AdminPrivilege(users))
 	{
 		aR.GET("/list", cont.List)
-		aR.POST("/upload", cont.Upload)
 		aR.POST("/delete", cont.Delete)
 	}
 }
 
-func BuildJobBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+func PreBuildBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 	users := hd.Services.UserService
-	cont := &admin.BuildJob{HD: hd}
-	aR := rg.Group("/build-job").Use(middleware.AdminPrivilege(users))
+	cont := &admin.PreBuild{HD: hd}
+	aR := rg.Group("/pre-build").Use(middleware.AdminPrivilege(users))
 	{
 		aR.GET("/versions", cont.Versions)
 		aR.POST("/trigger", cont.Trigger)

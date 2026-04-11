@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 type RepackagerService struct {
@@ -14,112 +13,116 @@ type RepackagerService struct {
 
 // RepackageResult holds the path to the repackaged file and a cleanup function.
 type RepackageResult struct {
-	FilePath string   // path to the generated file
-	Cleanup  func()   // call when done to remove temp files
+	FilePath string
+	Cleanup  func()
 }
 
-// RepackageLinuxDeb injects custom.txt into a .deb package.
-// It extracts the deb, adds custom.txt to /usr/share/rustdesk/, and rebuilds.
-func (s *RepackagerService) RepackageLinuxDeb(baseDeb string, customTxtContent string) (*RepackageResult, error) {
-	// Verify dpkg-deb is available
+// Repackage takes a build output folder, injects custom.txt, and packages into the requested format.
+func (s *RepackagerService) Repackage(buildDir string, format string, customTxtContent string) (*RepackageResult, error) {
+	switch format {
+	case "deb":
+		return s.packageDeb(buildDir, customTxtContent)
+	case "zip":
+		return s.packageZip(buildDir, customTxtContent)
+	default:
+		return nil, fmt.Errorf("packaging format not yet supported: %s", format)
+	}
+}
+
+// packageDeb creates a .deb from a build output folder with custom.txt injected.
+// Uses the same directory structure as build.py's build_deb_from_folder().
+func (s *RepackagerService) packageDeb(buildDir string, customTxtContent string) (*RepackageResult, error) {
 	if _, err := exec.LookPath("dpkg-deb"); err != nil {
 		return nil, fmt.Errorf("dpkg-deb not found: %w (install dpkg on this server)", err)
 	}
 
-	// Create temp working directory
-	workDir, err := os.MkdirTemp("", "rustdesk-repack-*")
+	workDir, err := os.MkdirTemp("", "rustdesk-repack-deb-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
+	cleanup := func() { os.RemoveAll(workDir) }
 
-	cleanup := func() {
-		os.RemoveAll(workDir)
-	}
+	// Build the deb directory structure
+	debRoot := filepath.Join(workDir, "deb")
+	dataDir := filepath.Join(debRoot, "usr", "share", "rustdesk")
+	os.MkdirAll(dataDir, 0755)
+	os.MkdirAll(filepath.Join(debRoot, "usr", "bin"), 0755)
 
-	extractDir := filepath.Join(workDir, "extracted")
-	outputFile := filepath.Join(workDir, "output.deb")
-
-	// Extract the deb
-	cmd := exec.Command("dpkg-deb", "-R", baseDeb, extractDir)
+	// Copy build output into the data directory
+	cmd := exec.Command("cp", "-a", buildDir+"/.", dataDir+"/")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		cleanup()
-		return nil, fmt.Errorf("dpkg-deb extract failed: %w\n%s", err, string(out))
+		return nil, fmt.Errorf("failed to copy build output: %w\n%s", err, string(out))
 	}
 
-	// Write custom.txt into the rustdesk data directory
-	customTxtPath := filepath.Join(extractDir, "usr", "share", "rustdesk", "custom.txt")
-	if err := os.WriteFile(customTxtPath, []byte(customTxtContent), 0644); err != nil {
+	// Inject custom.txt
+	if err := os.WriteFile(filepath.Join(dataDir, "custom.txt"), []byte(customTxtContent), 0644); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("failed to write custom.txt: %w", err)
 	}
 
-	// Rebuild the deb
-	cmd = exec.Command("dpkg-deb", "-b", extractDir, outputFile)
+	// Create symlink: /usr/bin/rustdesk -> /usr/share/rustdesk/rustdesk
+	os.Symlink("/usr/share/rustdesk/rustdesk", filepath.Join(debRoot, "usr", "bin", "rustdesk"))
+
+	// Create minimal DEBIAN/control
+	debianDir := filepath.Join(debRoot, "DEBIAN")
+	os.MkdirAll(debianDir, 0755)
+	control := `Package: rustdesk
+Architecture: amd64
+Version: 0.0.0
+Depends: libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libpam0g
+Description: RustDesk custom client
+`
+	if err := os.WriteFile(filepath.Join(debianDir, "control"), []byte(control), 0644); err != nil {
+		cleanup()
+		return nil, fmt.Errorf("failed to write control file: %w", err)
+	}
+
+	// Build the deb
+	outputFile := filepath.Join(workDir, "output.deb")
+	cmd = exec.Command("dpkg-deb", "-b", debRoot, outputFile)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("dpkg-deb build failed: %w\n%s", err, string(out))
 	}
 
-	return &RepackageResult{
-		FilePath: outputFile,
-		Cleanup:  cleanup,
-	}, nil
+	return &RepackageResult{FilePath: outputFile, Cleanup: cleanup}, nil
 }
 
-// RepackageWindowsExe injects custom.txt into a Windows build folder and creates a zip.
-// For full portable EXE packing, the portable packer binary + Python/Brotli are needed.
-// This simplified version creates a zip with custom.txt included.
-func (s *RepackagerService) RepackageWindowsExe(baseFile string, customTxtContent string) (*RepackageResult, error) {
-	// For .exe base files, we create a zip containing the exe + custom.txt
+// packageZip creates a zip from a build output folder with custom.txt injected.
+func (s *RepackagerService) packageZip(buildDir string, customTxtContent string) (*RepackageResult, error) {
 	if _, err := exec.LookPath("zip"); err != nil {
 		return nil, fmt.Errorf("zip not found: %w", err)
 	}
 
-	workDir, err := os.MkdirTemp("", "rustdesk-repack-win-*")
+	workDir, err := os.MkdirTemp("", "rustdesk-repack-zip-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
+	cleanup := func() { os.RemoveAll(workDir) }
 
-	cleanup := func() {
-		os.RemoveAll(workDir)
-	}
-
-	// Copy the base exe to work dir
-	baseName := filepath.Base(baseFile)
-	destExe := filepath.Join(workDir, baseName)
-	if out, err := exec.Command("cp", baseFile, destExe).CombinedOutput(); err != nil {
+	// Copy build output to work dir
+	stageDir := filepath.Join(workDir, "rustdesk")
+	cmd := exec.Command("cp", "-a", buildDir, stageDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
 		cleanup()
-		return nil, fmt.Errorf("failed to copy base exe: %w\n%s", err, string(out))
+		return nil, fmt.Errorf("failed to copy build output: %w\n%s", err, string(out))
 	}
 
-	// Write custom.txt
-	if err := os.WriteFile(filepath.Join(workDir, "custom.txt"), []byte(customTxtContent), 0644); err != nil {
+	// Inject custom.txt
+	if err := os.WriteFile(filepath.Join(stageDir, "custom.txt"), []byte(customTxtContent), 0644); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("failed to write custom.txt: %w", err)
 	}
 
 	// Create zip
-	outputFile := filepath.Join(workDir, strings.TrimSuffix(baseName, ".exe")+".zip")
-	cmd := exec.Command("zip", "-j", outputFile, destExe, filepath.Join(workDir, "custom.txt"))
+	outputFile := filepath.Join(workDir, "output.zip")
+	cmd = exec.Command("zip", "-r", outputFile, "rustdesk")
+	cmd.Dir = workDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("zip failed: %w\n%s", err, string(out))
 	}
 
-	return &RepackageResult{
-		FilePath: outputFile,
-		Cleanup:  cleanup,
-	}, nil
-}
-
-// Repackage dispatches to the appropriate platform-specific repackager.
-func (s *RepackagerService) Repackage(baseFilePath string, format string, customTxtContent string) (*RepackageResult, error) {
-	switch format {
-	case "deb":
-		return s.RepackageLinuxDeb(baseFilePath, customTxtContent)
-	case "exe":
-		return s.RepackageWindowsExe(baseFilePath, customTxtContent)
-	default:
-		return nil, fmt.Errorf("repackaging not yet supported for format: %s", format)
-	}
+	return &RepackageResult{FilePath: outputFile, Cleanup: cleanup}, nil
 }

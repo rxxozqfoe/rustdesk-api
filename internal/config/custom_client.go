@@ -8,8 +8,6 @@ const (
 )
 
 type CustomClient struct {
-	SigningKey       string `mapstructure:"signing-key"`        // base64-encoded Ed25519 private key (64 bytes decoded)
-	SigningPublicKey string `mapstructure:"signing-public-key"` // base64-encoded Ed25519 public key (for patching client source)
 	BaseBinariesDir  string `mapstructure:"base-binaries-dir"`  // directory for pre-built base binaries
 	CacheDir         string `mapstructure:"cache-dir"`          // directory for repackaged binary cache
 	RustdeskSrcDir   string `mapstructure:"rustdesk-src-dir"`   // path to rustdesk/ source tree

@@ -266,6 +266,11 @@ func InitApp() {
 		a.Logger.Errorf("failed to close stale audit connections: %v", err)
 	}
 
+	// Warn about missing custom client config
+	if a.Config.CustomClient.RustdeskSrcDir == "" {
+		a.Logger.Warn("custom-client rustdesk-src-dir is not configured — pre-build feature will not work.")
+	}
+
 	// Publish to package-level wiring vars so cobra commands can reach them.
 	appCtx = a
 	services = svcs
@@ -360,7 +365,7 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.StrategyDeviceGroup{},
 		&model.CustomClient{},
 		&model.BuildArtifact{},
-		&model.BuildJob{},
+		&model.PreBuild{},
 	)
 	if err != nil {
 		a.Logger.Error("migrate err :=>", err)

@@ -4,7 +4,8 @@ runtime/*
 !runtime/cache/.gitkeep
 resources/admin
 release
-data/rustdeskapi.db
+data/*
+!data/.gitkeep
 conf/config.dev.yaml
 __debug_bin*
 conf/id_ed25519.pub

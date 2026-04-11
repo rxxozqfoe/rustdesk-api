@@ -74,8 +74,6 @@ jwt:
   expire-duration: 168h
 
 custom-client:
-  signing-key: "" # base64-encoded Ed25519 private key (generate via: make generate-keypair)
-  signing-public-key: "" # base64-encoded Ed25519 public key (used to patch client source before build)
   base-binaries-dir: "./data/base-binaries"
   cache-dir: "./data/custom-client-cache"
   rustdesk-src-dir: "../rustdesk" # path to rustdesk/ source tree
