@@ -6,12 +6,6 @@ type Worker struct {
 	LogCacheDir      string `mapstructure:"log-cache-dir"`
 }
 
-func (w *Worker) GetLogCacheDir() string {
-	if w.LogCacheDir != "" {
-		return w.LogCacheDir
-	}
-	return "./data/build-logs"
-}
 
 func (w *Worker) Enabled() bool {
 	return w.Token != ""
