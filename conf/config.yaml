@@ -84,6 +84,7 @@ s3:
 worker:
   token: "" # shared secret for build-worker authentication (empty = worker disabled)
   heartbeat-timeout: 15 # seconds before a worker is considered offline
+  log-cache-dir: "./data/build-logs" # local cache for in-progress build logs
 
 ldap:
   enable: false

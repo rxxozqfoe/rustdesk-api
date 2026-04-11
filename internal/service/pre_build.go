@@ -72,9 +72,9 @@ func (s *PreBuildService) Trigger(version, platform, arch string) (*model.PreBui
 		return nil, fmt.Errorf("a build for %s/%s is already in progress, please wait", platform, arch)
 	}
 
-	logDir := "./data/build-logs"
+	logDir := s.ctx.Config.Worker.GetLogCacheDir()
 	os.MkdirAll(logDir, 0755)
-	logPath := filepath.Join(logDir, fmt.Sprintf("prebuild_%s_%s_%s_%d.log", version, platform, arch, time.Now().Unix()))
+	logPath := filepath.Join(logDir, fmt.Sprintf("prebuild_%s_%s_%s_%d.tmp.log", version, platform, arch, time.Now().Unix()))
 
 	job := &model.PreBuild{
 		Version:  version,
