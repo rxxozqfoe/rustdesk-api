@@ -14,17 +14,15 @@ type PreBuild struct {
 	HD *deps.HandlerDeps
 }
 
-// Versions returns available git tags from the rustdesk source tree.
+// Versions returns available git tags, proxied from the build-worker.
 // @Tags PreBuild
 // @Summary List available versions
-// @Description List git tags (semver) from rustdesk source for building
 // @Produce  json
 // @Success 200 {object} response.Response{data=[]string}
-// @Failure 500 {object} response.Response
 // @Router /admin/pre-build/versions [get]
 // @Security token
 func (ct *PreBuild) Versions(c *gin.Context) {
-	versions, err := ct.HD.Services.PreBuildService.ListVersions()
+	versions, err := ct.HD.Services.WorkerService.ProxyVersions()
 	if err != nil {
 		response.Fail(c, 101, "failed to list versions: "+err.Error())
 		return
@@ -32,15 +30,13 @@ func (ct *PreBuild) Versions(c *gin.Context) {
 	response.Success(c, versions)
 }
 
-// Trigger starts a new build job.
+// Trigger starts a new build job (creates a pending record for worker to pick up).
 // @Tags PreBuild
 // @Summary Trigger a build
-// @Description Start building a rustdesk client for the specified version and platform
 // @Accept  json
 // @Produce  json
 // @Param body body admin.PreBuildTriggerForm true "Build parameters"
 // @Success 200 {object} response.Response{data=model.PreBuild}
-// @Failure 500 {object} response.Response
 // @Router /admin/pre-build/trigger [post]
 // @Security token
 func (ct *PreBuild) Trigger(c *gin.Context) {
@@ -65,13 +61,11 @@ func (ct *PreBuild) Trigger(c *gin.Context) {
 // List returns paginated build jobs.
 // @Tags PreBuild
 // @Summary List build jobs
-// @Description Get paginated list of build jobs, optionally filtered by status
 // @Produce  json
 // @Param page query int false "Page"
 // @Param page_size query int false "Page size"
-// @Param status query string false "Filter by status (pending, building, completed, failed)"
+// @Param status query string false "Filter by status"
 // @Success 200 {object} response.Response{data=model.PreBuildList}
-// @Failure 500 {object} response.Response
 // @Router /admin/pre-build/list [get]
 // @Security token
 func (ct *PreBuild) List(c *gin.Context) {
@@ -93,11 +87,9 @@ func (ct *PreBuild) List(c *gin.Context) {
 // Detail returns a single build job.
 // @Tags PreBuild
 // @Summary Build job detail
-// @Description Get build job details by ID
 // @Produce  json
 // @Param id path int true "Build Job ID"
 // @Success 200 {object} response.Response{data=model.PreBuild}
-// @Failure 500 {object} response.Response
 // @Router /admin/pre-build/detail/{id} [get]
 // @Security token
 func (ct *PreBuild) Detail(c *gin.Context) {
@@ -111,15 +103,13 @@ func (ct *PreBuild) Detail(c *gin.Context) {
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 }
 
-// Log returns build log content from a given offset.
+// Log returns build log content, proxied from the build-worker.
 // @Tags PreBuild
 // @Summary Get build log
-// @Description Read build log incrementally (for live tailing)
 // @Produce  json
 // @Param id path int true "Build Job ID"
 // @Param offset query int false "Byte offset to read from"
 // @Success 200 {object} response.Response
-// @Failure 500 {object} response.Response
 // @Router /admin/pre-build/log/{id} [get]
 // @Security token
 func (ct *PreBuild) Log(c *gin.Context) {
@@ -128,7 +118,7 @@ func (ct *PreBuild) Log(c *gin.Context) {
 	offsetStr := c.DefaultQuery("offset", "0")
 	offset, _ := strconv.ParseInt(offsetStr, 10, 64)
 
-	content, newOffset, err := ct.HD.Services.PreBuildService.GetLog(uint(iid), offset)
+	content, newOffset, err := ct.HD.Services.WorkerService.ProxyLog(uint(iid), offset)
 	if err != nil {
 		response.Fail(c, 101, "failed to read log: "+err.Error())
 		return
@@ -139,35 +129,13 @@ func (ct *PreBuild) Log(c *gin.Context) {
 	})
 }
 
-// Cancel cancels a pending or running build job.
-// @Tags PreBuild
-// @Summary Cancel build job
-// @Description Cancel a pending or running build
-// @Produce  json
-// @Param id path int true "Build Job ID"
-// @Success 200 {object} response.Response
-// @Failure 500 {object} response.Response
-// @Router /admin/pre-build/cancel/{id} [post]
-// @Security token
-func (ct *PreBuild) Cancel(c *gin.Context) {
-	id := c.Param("id")
-	iid, _ := strconv.Atoi(id)
-	if err := ct.HD.Services.PreBuildService.Cancel(uint(iid)); err != nil {
-		response.Fail(c, 101, err.Error())
-		return
-	}
-	response.Success(c, nil)
-}
-
-// Delete removes a build job record and its log file.
+// Delete removes a build job record.
 // @Tags PreBuild
 // @Summary Delete build job
-// @Description Delete a build job record
 // @Accept  json
 // @Produce  json
 // @Param body body object true "id"
 // @Success 200 {object} response.Response
-// @Failure 500 {object} response.Response
 // @Router /admin/pre-build/delete [post]
 // @Security token
 func (ct *PreBuild) Delete(c *gin.Context) {

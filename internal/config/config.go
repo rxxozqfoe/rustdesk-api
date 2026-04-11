@@ -51,6 +51,8 @@ type Config struct {
 	Proxy        Proxy
 	Ldap         Ldap
 	CustomClient CustomClient `mapstructure:"custom-client"`
+	S3           S3           `mapstructure:"s3"`
+	Worker       Worker       `mapstructure:"worker"`
 }
 
 func (a *Admin) Init() {

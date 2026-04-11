@@ -1,13 +1,12 @@
 package service
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 	"gorm.io/gorm"
@@ -29,7 +28,7 @@ func (s *CustomClientService) List(page, pageSize uint, where func(tx *gorm.DB))
 	return res
 }
 
-// Create saves the record with status=bundling, then starts async bundling.
+// Create saves the record with status=bundling for the build-worker to pick up.
 func (s *CustomClientService) Create(c *model.CustomClient) error {
 	// Validate pre-built artifact exists
 	ba := s.ctx.Services.BuildArtifactService.FindByPlatformArchVersion(c.Platform, c.Arch, c.Version)
@@ -38,93 +37,17 @@ func (s *CustomClientService) Create(c *model.CustomClient) error {
 	}
 
 	c.Status = model.BundleStatusBundling
-	if err := s.ctx.DB.Create(c).Error; err != nil {
-		return err
-	}
-
-	// Start async bundle
-	go s.executeBundle(c.Id)
-	return nil
+	return s.ctx.DB.Create(c).Error
 }
 
 func (s *CustomClientService) Delete(c *model.CustomClient) error {
-	// Remove bundled file
 	if c.FilePath != "" {
 		os.Remove(c.FilePath)
 	}
+	if c.S3Key != "" && s.ctx.S3 != nil {
+		s.ctx.S3.Delete(context.Background(), c.S3Key)
+	}
 	return s.ctx.DB.Delete(c).Error
-}
-
-// executeBundle runs the repackaging in background.
-func (s *CustomClientService) executeBundle(id uint) {
-	c := s.InfoById(id)
-	if c.Id == 0 {
-		return
-	}
-
-	// Generate custom.txt
-	customTxt, err := s.GenerateCustomTxt(c)
-	if err != nil {
-		s.ctx.DB.Model(c).Updates(map[string]any{
-			"status": model.BundleStatusFailed,
-			"error":  fmt.Sprintf("failed to generate custom.txt: %v", err),
-		})
-		return
-	}
-
-	// Find pre-built artifact
-	ba := s.ctx.Services.BuildArtifactService.FindByPlatformArchVersion(c.Platform, c.Arch, c.Version)
-	if ba.Id == 0 {
-		s.ctx.DB.Model(c).Updates(map[string]any{
-			"status": model.BundleStatusFailed,
-			"error":  "pre-built binary not found",
-		})
-		return
-	}
-
-	// Repackage
-	result, err := s.ctx.Services.RepackagerService.Repackage(ba.DirPath, c.Format, customTxt)
-	if err != nil {
-		s.ctx.DB.Model(c).Updates(map[string]any{
-			"status": model.BundleStatusFailed,
-			"error":  fmt.Sprintf("repackaging failed: %v", err),
-		})
-		return
-	}
-
-	// Move bundled file to persistent location
-	cacheDir, _ := filepath.Abs(s.ctx.Config.CustomClient.CacheDir)
-	os.MkdirAll(cacheDir, 0755)
-
-	appName := c.AppName
-	if appName == "" {
-		appName = "rustdesk"
-	}
-	filename := fmt.Sprintf("%s-%s-%s-%s.%s", appName, c.Version, c.Platform, c.Arch, c.Format)
-	destPath := filepath.Join(cacheDir, fmt.Sprintf("%d-%s", c.Id, filename))
-
-	if err := copyFile(result.FilePath, destPath); err != nil {
-		result.Cleanup()
-		s.ctx.DB.Model(c).Updates(map[string]any{
-			"status": model.BundleStatusFailed,
-			"error":  fmt.Sprintf("failed to save bundled file: %v", err),
-		})
-		return
-	}
-	result.Cleanup()
-
-	// Get file size
-	info, _ := os.Stat(destPath)
-	var fileSize int64
-	if info != nil {
-		fileSize = info.Size()
-	}
-
-	s.ctx.DB.Model(c).Updates(map[string]any{
-		"status":    model.BundleStatusCompleted,
-		"file_path": destPath,
-		"file_size": fileSize,
-	})
 }
 
 // ─── Signing ──────────────────────────────────────────────────────────────
@@ -191,28 +114,4 @@ func SignNaCl(privKey ed25519.PrivateKey, message []byte) []byte {
 	copy(signed, sig)
 	copy(signed[len(sig):], message)
 	return signed
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
-}
-
-func DerivePublicKeyB64() (string, error) {
-	privKeyBytes, err := base64.StdEncoding.DecodeString(signingPrivateKeyB64)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode signing key: %w", err)
-	}
-	pubKey := ed25519.PrivateKey(privKeyBytes).Public().(ed25519.PublicKey)
-	return base64.StdEncoding.EncodeToString(pubKey), nil
 }

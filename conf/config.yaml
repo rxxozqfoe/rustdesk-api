@@ -74,11 +74,20 @@ jwt:
   expire-duration: 168h
 
 custom-client:
-  base-binaries-dir: "./data/base-binaries"
-  cache-dir: "./data/custom-client-cache"
-  rustdesk-src-dir: "../rustdesk" # path to rustdesk/ source tree
-  build-worktree-dir: "./data/build-worktree" # git worktree for isolated builds
-  build-log-dir: "./data/build-logs" # build log output directory
+  # Build execution is handled by the build-worker service.
+  # Configure worker.token and worker.base-url to enable.
+
+s3:
+  endpoint: "" # e.g. "minio:9000" or "s3.amazonaws.com" (empty = disabled)
+  access-key: ""
+  secret-key: ""
+  bucket: "rustdesk-builds"
+  region: "us-east-1"
+  use-ssl: false
+
+worker:
+  token: "" # shared secret for build-worker authentication (empty = worker disabled)
+  base-url: "" # worker HTTP base URL for proxying versions/logs (e.g. "http://worker:8080")
 
 ldap:
   enable: false

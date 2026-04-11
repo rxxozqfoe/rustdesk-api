@@ -9,6 +9,7 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/internal/app"
 	"github.com/lejianwen/rustdesk-api/v2/internal/config"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/s3"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/upload"
 	"github.com/lejianwen/rustdesk-api/v2/internal/service"
 	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
@@ -28,5 +29,6 @@ type HandlerDeps struct {
 	Localizer    LocalizerFunc
 	LoginLimiter *utils.LoginLimiter
 	Oss          *upload.Oss
+	S3           *s3.Client // nil when S3 is not configured
 	Services     *service.Service
 }

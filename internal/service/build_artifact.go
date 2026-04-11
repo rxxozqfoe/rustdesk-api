@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,6 +45,9 @@ func (s *BuildArtifactService) Create(ba *model.BuildArtifact) error {
 func (s *BuildArtifactService) Delete(ba *model.BuildArtifact) error {
 	if ba.DirPath != "" {
 		os.RemoveAll(ba.DirPath)
+	}
+	if ba.S3Key != "" && s.ctx.S3 != nil {
+		s.ctx.S3.Delete(context.Background(), ba.S3Key)
 	}
 	return s.ctx.DB.Delete(ba).Error
 }

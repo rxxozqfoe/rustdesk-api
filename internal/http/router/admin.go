@@ -370,7 +370,6 @@ func PreBuildBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 		aR.GET("/list", cont.List)
 		aR.GET("/detail/:id", cont.Detail)
 		aR.GET("/log/:id", cont.Log)
-		aR.POST("/cancel/:id", cont.Cancel)
 		aR.POST("/delete", cont.Delete)
 	}
 }

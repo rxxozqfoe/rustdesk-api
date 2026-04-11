@@ -1,9 +1,11 @@
 package admin
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
@@ -138,6 +140,17 @@ func (ct *CustomClient) Download(c *gin.Context) {
 		response.Fail(c, 101, fmt.Sprintf("bundle is not ready (status: %s)", cc.Status))
 		return
 	}
+
+	// Prefer S3 presigned URL when available
+	if cc.S3Key != "" && ct.HD.S3 != nil {
+		presignedURL, err := ct.HD.S3.PresignedGetURL(context.Background(), cc.S3Key, 10*time.Minute)
+		if err == nil {
+			c.Redirect(302, presignedURL.String())
+			return
+		}
+		// Fall through to local file on presign error
+	}
+
 	if cc.FilePath == "" {
 		response.Fail(c, 101, "bundled file not found")
 		return
