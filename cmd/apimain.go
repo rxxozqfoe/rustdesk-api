@@ -243,6 +243,13 @@ func InitApp() {
 		}
 	}
 
+	// Validate worker config at startup
+	if a.Config.Worker.Enabled() {
+		if a.Config.Worker.LogCacheDir == "" {
+			a.Logger.Fatal("worker.token is set but worker.log-cache-dir is not configured")
+		}
+	}
+
 	// Service aggregate (with back-pointer — see service.New)
 	svcs := service.New(&a.Config, db, a.Logger, jwtHandler, locker, s3Client)
 
