@@ -1,11 +1,9 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
@@ -32,12 +30,35 @@ type WorkerJob struct {
 }
 
 // FetchPendingJob returns one pending pre-build or bundle job for the worker to execute.
-// Pre-build jobs take priority.
-func (s *WorkerService) FetchPendingJob() (*WorkerJob, error) {
+// Pre-build jobs take priority. Jobs are filtered by the worker's supported platforms.
+func (s *WorkerService) FetchPendingJob(workerName string, platforms []model.WorkerPlatform) (*WorkerJob, error) {
+	// Update worker heartbeat on poll
+	if workerName != "" {
+		s.ctx.Services.WorkerRegistryService.Heartbeat(workerName)
+	}
+
 	// Try pre-build first
 	pb := &model.PreBuild{}
-	s.ctx.DB.Where("status = ?", model.BuildStatusPending).Order("id ASC").First(pb)
+	tx := s.ctx.DB.Where("status = ?", model.BuildStatusPending)
+	if len(platforms) > 0 {
+		var conditions []string
+		var args []any
+		for _, p := range platforms {
+			conditions = append(conditions, "(platform = ? AND arch = ?)")
+			args = append(args, p.Platform, p.Arch)
+		}
+		tx = tx.Where("("+strings.Join(conditions, " OR ")+")", args...)
+	}
+	tx.Order("id ASC").First(pb)
 	if pb.Id > 0 {
+		// Atomically claim the job: UPDATE ... WHERE id=? AND status=pending
+		result := s.ctx.DB.Model(&model.PreBuild{}).
+			Where("id = ? AND status = ?", pb.Id, model.BuildStatusPending).
+			Update("status", model.BuildStatusBuilding)
+		if result.RowsAffected == 0 {
+			// Another worker grabbed it, return nil
+			return nil, nil
+		}
 		return &WorkerJob{
 			ID:       pb.Id,
 			Type:     "pre-build",
@@ -49,7 +70,17 @@ func (s *WorkerService) FetchPendingJob() (*WorkerJob, error) {
 
 	// Then try bundle
 	cc := &model.CustomClient{}
-	s.ctx.DB.Where("status = ?", model.BundleStatusBundling).Order("id ASC").First(cc)
+	tx2 := s.ctx.DB.Where("status = ?", model.BundleStatusBundling)
+	if len(platforms) > 0 {
+		var conditions []string
+		var args []any
+		for _, p := range platforms {
+			conditions = append(conditions, "(platform = ? AND arch = ?)")
+			args = append(args, p.Platform, p.Arch)
+		}
+		tx2 = tx2.Where("("+strings.Join(conditions, " OR ")+")", args...)
+	}
+	tx2.Order("id ASC").First(cc)
 	if cc.Id > 0 {
 		// Generate custom.txt (signed by API server — worker just injects it)
 		customTxt, err := s.ctx.Services.CustomClientService.GenerateCustomTxt(cc)
@@ -125,7 +156,7 @@ func (s *WorkerService) AppendLog(jobID uint, content string) error {
 }
 
 // CompletePreBuild marks a pre-build job as completed and registers the artifact.
-func (s *WorkerService) CompletePreBuild(jobID uint, s3Key string) error {
+func (s *WorkerService) CompletePreBuild(jobID uint, s3Key, logS3Key string) error {
 	pb := &model.PreBuild{}
 	s.ctx.DB.Where("id = ?", jobID).First(pb)
 	if pb.Id == 0 {
@@ -151,11 +182,19 @@ func (s *WorkerService) CompletePreBuild(jobID uint, s3Key string) error {
 	}
 
 	now := custom_types.AutoTime(time.Now())
-	return s.ctx.DB.Model(pb).Updates(map[string]any{
+	updates := map[string]any{
 		"status":       model.BuildStatusCompleted,
 		"artifact_id":  artifact.Id,
 		"completed_at": &now,
-	}).Error
+	}
+	if logS3Key != "" {
+		// Clean up local log cache
+		if pb.LogPath != "" {
+			os.Remove(pb.LogPath)
+		}
+		updates["log_path"] = logS3Key
+	}
+	return s.ctx.DB.Model(pb).Updates(updates).Error
 }
 
 // CompleteBundle marks a bundle job as completed.
@@ -168,15 +207,24 @@ func (s *WorkerService) CompleteBundle(jobID uint, s3Key string, fileSize int64)
 }
 
 // FailJob marks a job as failed.
-func (s *WorkerService) FailJob(jobID uint, jobType string, errMsg string) error {
+func (s *WorkerService) FailJob(jobID uint, jobType string, errMsg string, logS3Key string) error {
 	now := custom_types.AutoTime(time.Now())
 	switch jobType {
 	case "pre-build":
-		return s.ctx.DB.Model(&model.PreBuild{}).Where("id = ?", jobID).Updates(map[string]any{
+		updates := map[string]any{
 			"status":       model.BuildStatusFailed,
 			"error":        errMsg,
 			"completed_at": &now,
-		}).Error
+		}
+		if logS3Key != "" {
+			pb := &model.PreBuild{}
+			s.ctx.DB.Where("id = ?", jobID).First(pb)
+			if pb.LogPath != "" {
+				os.Remove(pb.LogPath)
+			}
+			updates["log_path"] = logS3Key
+		}
+		return s.ctx.DB.Model(&model.PreBuild{}).Where("id = ?", jobID).Updates(updates).Error
 	case "bundle":
 		return s.ctx.DB.Model(&model.CustomClient{}).Where("id = ?", jobID).Updates(map[string]any{
 			"status": model.BundleStatusFailed,
@@ -189,72 +237,4 @@ func (s *WorkerService) FailJob(jobID uint, jobType string, errMsg string) error
 
 func openOrCreateFile(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-}
-
-// ProxyVersions fetches available versions from the worker's HTTP server.
-func (s *WorkerService) ProxyVersions() ([]string, error) {
-	baseURL := s.ctx.Config.Worker.BaseURL
-	if baseURL == "" {
-		return nil, fmt.Errorf("worker base-url is not configured")
-	}
-
-	resp, err := s.workerGet(baseURL + "/api/worker/versions")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var result struct {
-		Data []string `json:"data"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode worker response: %w", err)
-	}
-	return result.Data, nil
-}
-
-// ProxyLog fetches build log from the worker's HTTP server.
-func (s *WorkerService) ProxyLog(jobID uint, offset int64) (string, int64, error) {
-	baseURL := s.ctx.Config.Worker.BaseURL
-	if baseURL == "" {
-		return "", 0, fmt.Errorf("worker base-url is not configured")
-	}
-
-	url := fmt.Sprintf("%s/api/worker/jobs/%d/log?offset=%d", baseURL, jobID, offset)
-	resp, err := s.workerGet(url)
-	if err != nil {
-		return "", 0, err
-	}
-	defer resp.Body.Close()
-
-	var result struct {
-		Data struct {
-			Content   string `json:"content"`
-			NewOffset int64  `json:"new_offset"`
-		} `json:"data"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", offset, fmt.Errorf("failed to decode worker response: %w", err)
-	}
-	return result.Data.Content, result.Data.NewOffset, nil
-}
-
-func (s *WorkerService) workerGet(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+s.ctx.Config.Worker.Token)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("worker request failed: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		return nil, fmt.Errorf("worker returned %d: %s", resp.StatusCode, string(body))
-	}
-	return resp, nil
 }

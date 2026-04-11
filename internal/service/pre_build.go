@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,10 +65,11 @@ func (s *PreBuildService) Trigger(version, platform, arch string) (*model.PreBui
 
 	var activeCount int64
 	s.ctx.DB.Model(&model.PreBuild{}).
-		Where("status IN ?", []string{model.BuildStatusPending, model.BuildStatusBuilding}).
+		Where("platform = ? AND arch = ? AND status IN ?", platform, arch,
+			[]string{model.BuildStatusPending, model.BuildStatusBuilding}).
 		Count(&activeCount)
 	if activeCount > 0 {
-		return nil, fmt.Errorf("a build is already in progress, please wait")
+		return nil, fmt.Errorf("a build for %s/%s is already in progress, please wait", platform, arch)
 	}
 
 	logDir := "./data/build-logs"
@@ -85,4 +88,72 @@ func (s *PreBuildService) Trigger(version, platform, arch string) (*model.PreBui
 	}
 
 	return job, nil
+}
+
+// ─── Log Reading ─────────────────────────────────────────────────────────
+
+// GetLog returns the build log content starting from the given byte offset.
+func (s *PreBuildService) GetLog(id uint, offset int64) (string, int64, error) {
+	job := s.InfoById(id)
+	if job.Id == 0 {
+		return "", 0, fmt.Errorf("job not found")
+	}
+	if job.LogPath == "" {
+		return "", 0, nil
+	}
+
+	// In-progress jobs: read from local cache file
+	if job.Status == model.BuildStatusPending || job.Status == model.BuildStatusBuilding {
+		return readLocalLog(job.LogPath, offset)
+	}
+
+	// Completed/failed jobs: read from S3
+	if s.ctx.S3 != nil {
+		return s.readS3Log(job.LogPath, offset)
+	}
+
+	// Fallback to local if S3 not configured
+	return readLocalLog(job.LogPath, offset)
+}
+
+func readLocalLog(path string, offset int64) (string, int64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", 0, nil
+		}
+		return "", 0, err
+	}
+	defer f.Close()
+
+	if offset > 0 {
+		f.Seek(offset, io.SeekStart)
+	}
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", offset, err
+	}
+	return string(data), offset + int64(len(data)), nil
+}
+
+func (s *PreBuildService) readS3Log(s3Key string, offset int64) (string, int64, error) {
+	reader, err := s.ctx.S3.GetObject(context.Background(), s3Key)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to read log from S3: %w", err)
+	}
+	defer reader.Close()
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return "", 0, err
+	}
+
+	content := string(data)
+	if offset > 0 && int64(len(content)) > offset {
+		content = content[offset:]
+	} else if offset >= int64(len(content)) {
+		return "", int64(len(data)), nil
+	}
+	return content, int64(len(data)), nil
 }

@@ -19,7 +19,10 @@ func WorkerInit(g *gin.Engine, hd *deps.HandlerDeps) {
 	wg.Use(middleware.WorkerAuth(token))
 
 	jobs := &worker.Jobs{HD: hd}
-	wg.GET("/jobs/pending", jobs.FetchPending)
+	wg.POST("/register", jobs.Register)
+	wg.POST("/heartbeat", jobs.Heartbeat)
+	wg.POST("/versions", jobs.PushVersions)
+	wg.POST("/jobs/pending", jobs.FetchPending)
 	wg.POST("/jobs/:id/start", jobs.Start)
 	wg.POST("/jobs/:id/log", jobs.AppendLog)
 	wg.POST("/jobs/:id/complete", jobs.Complete)

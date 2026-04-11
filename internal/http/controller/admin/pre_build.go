@@ -14,7 +14,7 @@ type PreBuild struct {
 	HD *deps.HandlerDeps
 }
 
-// Versions returns available git tags, proxied from the build-worker.
+// Versions returns available versions from registered workers.
 // @Tags PreBuild
 // @Summary List available versions
 // @Produce  json
@@ -22,11 +22,7 @@ type PreBuild struct {
 // @Router /admin/pre-build/versions [get]
 // @Security token
 func (ct *PreBuild) Versions(c *gin.Context) {
-	versions, err := ct.HD.Services.WorkerService.ProxyVersions()
-	if err != nil {
-		response.Fail(c, 101, "failed to list versions: "+err.Error())
-		return
-	}
+	versions := ct.HD.Services.WorkerRegistryService.GetAllVersions()
 	response.Success(c, versions)
 }
 
@@ -103,7 +99,7 @@ func (ct *PreBuild) Detail(c *gin.Context) {
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 }
 
-// Log returns build log content, proxied from the build-worker.
+// Log returns build log content.
 // @Tags PreBuild
 // @Summary Get build log
 // @Produce  json
@@ -118,7 +114,7 @@ func (ct *PreBuild) Log(c *gin.Context) {
 	offsetStr := c.DefaultQuery("offset", "0")
 	offset, _ := strconv.ParseInt(offsetStr, 10, 64)
 
-	content, newOffset, err := ct.HD.Services.WorkerService.ProxyLog(uint(iid), offset)
+	content, newOffset, err := ct.HD.Services.PreBuildService.GetLog(uint(iid), offset)
 	if err != nil {
 		response.Fail(c, 101, "failed to read log: "+err.Error())
 		return

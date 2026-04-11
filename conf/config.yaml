@@ -87,7 +87,7 @@ s3:
 
 worker:
   token: "" # shared secret for build-worker authentication (empty = worker disabled)
-  base-url: "" # worker HTTP base URL for proxying versions/logs (e.g. "http://worker:8080")
+  heartbeat-timeout: 15 # seconds before a worker is considered offline
 
 ldap:
   enable: false

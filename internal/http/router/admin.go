@@ -49,6 +49,7 @@ func Init(g *gin.Engine, hd *deps.HandlerDeps) {
 	CustomClientBind(adg, hd)
 	BuildArtifactBind(adg, hd)
 	PreBuildBind(adg, hd)
+	WorkerStatusBind(adg, hd)
 }
 
 func RustdeskCmdBind(adg *gin.RouterGroup, hd *deps.HandlerDeps) {
@@ -371,5 +372,14 @@ func PreBuildBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 		aR.GET("/detail/:id", cont.Detail)
 		aR.GET("/log/:id", cont.Log)
 		aR.POST("/delete", cont.Delete)
+	}
+}
+
+func WorkerStatusBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	users := hd.Services.UserService
+	cont := &admin.WorkerStatus{HD: hd}
+	aR := rg.Group("/worker").Use(middleware.AdminPrivilege(users))
+	{
+		aR.GET("/list", cont.List)
 	}
 }

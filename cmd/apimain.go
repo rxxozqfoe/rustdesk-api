@@ -377,6 +377,7 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.CustomClient{},
 		&model.BuildArtifact{},
 		&model.PreBuild{},
+		&model.Worker{},
 	)
 	if err != nil {
 		a.Logger.Error("migrate err :=>", err)
