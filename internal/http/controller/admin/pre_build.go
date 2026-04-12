@@ -125,6 +125,24 @@ func (ct *PreBuild) Log(c *gin.Context) {
 	})
 }
 
+// Cancel cancels a pending or running build job.
+// @Tags PreBuild
+// @Summary Cancel build job
+// @Produce  json
+// @Param id path int true "Build Job ID"
+// @Success 200 {object} response.Response
+// @Router /admin/pre-build/cancel/{id} [post]
+// @Security token
+func (ct *PreBuild) Cancel(c *gin.Context) {
+	id := c.Param("id")
+	iid, _ := strconv.Atoi(id)
+	if err := ct.HD.Services.PreBuildService.Cancel(uint(iid)); err != nil {
+		response.Fail(c, 101, err.Error())
+		return
+	}
+	response.Success(c, nil)
+}
+
 // Delete removes a build job record.
 // @Tags PreBuild
 // @Summary Delete build job

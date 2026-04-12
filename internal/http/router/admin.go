@@ -27,6 +27,9 @@ func Init(g *gin.Engine, hd *deps.HandlerDeps) {
 
 	ConfigBind(adg, hd)
 
+	// Public (no auth) endpoints
+	CustomClientDownloadBind(adg, hd)
+
 	adg.Use(middleware.BackendUserAuth(users))
 	UserBind(adg, hd)
 	GroupBind(adg, hd)
@@ -337,6 +340,11 @@ func ShareRecordBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 	}
 }
 
+func CustomClientDownloadBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	cont := &admin.CustomClient{HD: hd}
+	rg.GET("/custom-client/download/:id", cont.Download)
+}
+
 func CustomClientBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 	users := hd.Services.UserService
 	cont := &admin.CustomClient{HD: hd}
@@ -347,7 +355,6 @@ func CustomClientBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 		aR.POST("/create", cont.Create)
 		aR.POST("/delete", cont.Delete)
 		aR.GET("/preview/:id", cont.Preview)
-		aR.GET("/download/:id", cont.Download)
 	}
 }
 
@@ -371,6 +378,7 @@ func PreBuildBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 		aR.GET("/list", cont.List)
 		aR.GET("/detail/:id", cont.Detail)
 		aR.GET("/log/:id", cont.Log)
+		aR.POST("/cancel/:id", cont.Cancel)
 		aR.POST("/delete", cont.Delete)
 	}
 }

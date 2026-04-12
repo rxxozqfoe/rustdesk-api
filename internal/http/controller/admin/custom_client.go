@@ -3,9 +3,7 @@ package admin
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
@@ -120,39 +118,24 @@ func (ct *CustomClient) Delete(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// Download serves the bundled installer file.
+// Download serves the bundled installer file (public, no auth required).
+// When S3 is configured, proxies the file from S3 through the API server.
 // @Tags CustomClient
 // @Summary Download bundled installer
 // @Produce  octet-stream
 // @Param id path int true "ID"
 // @Success 200 {file} binary
 // @Router /admin/custom-client/download/{id} [get]
-// @Security token
 func (ct *CustomClient) Download(c *gin.Context) {
 	id := c.Param("id")
 	iid, _ := strconv.Atoi(id)
 	cc := ct.HD.Services.CustomClientService.InfoById(uint(iid))
 	if cc.Id == 0 {
-		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
+		c.String(404, "not found")
 		return
 	}
 	if cc.Status != model.BundleStatusCompleted {
-		response.Fail(c, 101, fmt.Sprintf("bundle is not ready (status: %s)", cc.Status))
-		return
-	}
-
-	// Prefer S3 presigned URL when available
-	if cc.S3Key != "" && ct.HD.S3 != nil {
-		presignedURL, err := ct.HD.S3.PresignedGetURL(context.Background(), cc.S3Key, 10*time.Minute)
-		if err == nil {
-			c.Redirect(302, presignedURL.String())
-			return
-		}
-		// Fall through to local file on presign error
-	}
-
-	if cc.FilePath == "" {
-		response.Fail(c, 101, "bundled file not found")
+		c.String(400, "bundle is not ready (status: %s)", cc.Status)
 		return
 	}
 
@@ -160,8 +143,35 @@ func (ct *CustomClient) Download(c *gin.Context) {
 	if appName == "" {
 		appName = "rustdesk"
 	}
-	downloadName := fmt.Sprintf("%s-%s-%s-%s.%s", appName, cc.Version, cc.Platform, cc.Arch, cc.Format)
-	c.FileAttachment(cc.FilePath, filepath.Base(downloadName))
+	filename := fmt.Sprintf("%s-%s-%s-%s.%s", appName, cc.Version, cc.Platform, cc.Arch, cc.Format)
+
+	// Proxy from S3
+	if cc.S3Key != "" && ct.HD.S3 != nil {
+		reader, err := ct.HD.S3.GetObject(context.Background(), cc.S3Key)
+		if err == nil {
+			defer reader.Close()
+
+			contentType := "application/octet-stream"
+			switch cc.Format {
+			case "deb":
+				contentType = "application/vnd.debian.binary-package"
+			case "zip":
+				contentType = "application/zip"
+			}
+
+			c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+			c.DataFromReader(200, -1, contentType, reader, nil)
+			return
+		}
+		// Fall through to local file on S3 error
+	}
+
+	if cc.FilePath == "" {
+		c.String(404, "bundled file not found")
+		return
+	}
+
+	c.FileAttachment(cc.FilePath, filename)
 }
 
 // Preview returns the signed custom.txt content for testing.

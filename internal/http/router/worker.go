@@ -23,6 +23,7 @@ func WorkerInit(g *gin.Engine, hd *deps.HandlerDeps) {
 	wg.POST("/heartbeat", jobs.Heartbeat)
 	wg.POST("/versions", jobs.PushVersions)
 	wg.POST("/jobs/pending", jobs.FetchPending)
+	wg.GET("/jobs/:id/status", jobs.JobStatus)
 	wg.POST("/jobs/:id/start", jobs.Start)
 	wg.POST("/jobs/:id/log", jobs.AppendLog)
 	wg.POST("/jobs/:id/complete", jobs.Complete)

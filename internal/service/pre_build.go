@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	"github.com/lejianwen/rustdesk-api/v2/internal/model/custom_types"
 	"gorm.io/gorm"
 )
 
@@ -50,6 +51,27 @@ func (s *PreBuildService) Delete(job *model.PreBuild) error {
 		os.Remove(job.LogPath)
 	}
 	return s.ctx.DB.Delete(job).Error
+}
+
+// ─── Cancel ──────────────────────────────────────────────────────────────
+
+// Cancel marks a pending or building job as failed with "cancelled by user".
+// The build-worker checks job status periodically and will abort if cancelled.
+func (s *PreBuildService) Cancel(id uint) error {
+	job := s.InfoById(id)
+	if job.Id == 0 {
+		return fmt.Errorf("job not found")
+	}
+	if job.Status != model.BuildStatusPending && job.Status != model.BuildStatusBuilding {
+		return fmt.Errorf("job is not cancellable (status: %s)", job.Status)
+	}
+
+	now := custom_types.AutoTime(time.Now())
+	return s.ctx.DB.Model(job).Updates(map[string]any{
+		"status":       model.BuildStatusFailed,
+		"error":        "cancelled by user",
+		"completed_at": &now,
+	}).Error
 }
 
 // ─── Trigger ──────────────────────────────────────────────────────────────

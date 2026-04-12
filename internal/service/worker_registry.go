@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,22 +20,30 @@ func (s *WorkerRegistryService) Register(name string, platforms []model.WorkerPl
 	now := custom_types.AutoTime(time.Now())
 
 	w := &model.Worker{}
-	result := s.ctx.DB.Where("name = ?", name).First(w)
-	if result.Error == gorm.ErrRecordNotFound {
-		w = &model.Worker{
-			Name:       name,
-			Platforms:  platformsJSON,
-			LastSeenAt: &now,
-		}
-		if err := s.ctx.DB.Create(w).Error; err != nil {
-			return nil, fmt.Errorf("failed to register worker: %w", err)
+	err := s.ctx.DB.Where("name = ?", name).First(w).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to query worker: %w", err)
+	}
+
+	if w.Id > 0 {
+		// Update existing
+		w.Platforms = platformsJSON
+		w.LastSeenAt = &now
+		if err := s.ctx.DB.Save(w).Error; err != nil {
+			return nil, fmt.Errorf("failed to update worker: %w", err)
 		}
 		return w, nil
 	}
-	// Update existing
-	w.Platforms = platformsJSON
-	w.LastSeenAt = &now
-	s.ctx.DB.Save(w)
+
+	// Create new
+	w = &model.Worker{
+		Name:       name,
+		Platforms:  platformsJSON,
+		LastSeenAt: &now,
+	}
+	if err := s.ctx.DB.Create(w).Error; err != nil {
+		return nil, fmt.Errorf("failed to register worker: %w", err)
+	}
 	return w, nil
 }
 

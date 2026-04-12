@@ -95,6 +95,34 @@ func (j *Jobs) FetchPending(c *gin.Context) {
 	response.Success(c, job)
 }
 
+// JobStatus returns the current status of a job (for worker to check cancellation).
+// GET /api/worker/jobs/:id/status
+func (j *Jobs) JobStatus(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	jobType := c.DefaultQuery("type", "pre-build")
+	var status string
+	switch jobType {
+	case "pre-build":
+		pb := j.HD.Services.PreBuildService.InfoById(uint(id))
+		if pb.Id == 0 {
+			response.Fail(c, 101, "job not found")
+			return
+		}
+		status = pb.Status
+	case "bundle":
+		cc := j.HD.Services.CustomClientService.InfoById(uint(id))
+		if cc.Id == 0 {
+			response.Fail(c, 101, "job not found")
+			return
+		}
+		status = cc.Status
+	default:
+		response.Fail(c, 101, "unknown job type")
+		return
+	}
+	response.Success(c, gin.H{"status": status})
+}
+
 // Start marks a job as started by the worker.
 // POST /api/worker/jobs/:id/start
 func (j *Jobs) Start(c *gin.Context) {
