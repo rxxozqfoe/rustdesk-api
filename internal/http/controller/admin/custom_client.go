@@ -139,11 +139,7 @@ func (ct *CustomClient) Download(c *gin.Context) {
 		return
 	}
 
-	appName := cc.AppName
-	if appName == "" {
-		appName = "rustdesk"
-	}
-	filename := fmt.Sprintf("%s-%s-%s-%s.%s", appName, cc.Version, cc.Platform, cc.Arch, cc.Format)
+	filename := fmt.Sprintf("rustdesk-%s-%s-%s.%s", cc.Version, cc.Platform, cc.Arch, cc.Format)
 
 	// Proxy from S3
 	if cc.S3Key != "" && ct.HD.S3 != nil {

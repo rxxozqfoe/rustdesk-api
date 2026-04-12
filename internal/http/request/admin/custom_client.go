@@ -10,7 +10,6 @@ import (
 type CustomClientForm struct {
 	Id               uint              `json:"id"`
 	Name             string            `json:"name" validate:"required"`
-	AppName          string            `json:"app_name" validate:"required"`
 	ServerHost       string            `json:"server_host"`
 	ServerKey        string            `json:"server_key"`
 	ApiServer        string            `json:"api_server"`
@@ -27,7 +26,6 @@ func (f *CustomClientForm) ToCustomClient() *model.CustomClient {
 	cc := &model.CustomClient{}
 	cc.Id = f.Id
 	cc.Name = f.Name
-	cc.AppName = f.AppName
 	cc.ServerHost = f.ServerHost
 	cc.ServerKey = f.ServerKey
 	cc.ApiServer = f.ApiServer

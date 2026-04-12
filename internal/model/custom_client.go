@@ -8,7 +8,6 @@ type CustomClient struct {
 	IdModel
 	// Config
 	Name             string                `json:"name" gorm:"type:varchar(255);not null"`
-	AppName          string                `json:"app_name" gorm:"type:varchar(255);not null"`
 	ServerHost       string                `json:"server_host" gorm:"type:varchar(255)"`
 	ServerKey        string                `json:"server_key" gorm:"type:varchar(255)"`
 	ApiServer        string                `json:"api_server" gorm:"type:varchar(255)"`

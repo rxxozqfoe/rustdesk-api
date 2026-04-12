@@ -76,32 +76,43 @@ func (s *CustomClientService) GenerateCustomTxt(c *model.CustomClient) (string, 
 func (s *CustomClientService) buildCustomClientJSON(c *model.CustomClient) ([]byte, error) {
 	payload := make(map[string]any)
 
-	if c.AppName != "" {
-		payload["app-name"] = c.AppName
+	// Server settings must go into override-settings so RustDesk's
+	// get_option() can find them (top-level keys go to HARD_SETTINGS
+	// which is not queried by get_option).
+	overrideSettings := make(map[string]string)
+
+	// Merge user-provided override settings first
+	if len(c.OverrideSettings) > 0 {
+		var os map[string]string
+		if err := json.Unmarshal(c.OverrideSettings, &os); err == nil {
+			for k, v := range os {
+				overrideSettings[k] = v
+			}
+		}
 	}
+
+	// Server config goes into override-settings
 	if c.ServerHost != "" {
-		payload["custom-rendezvous-server"] = c.ServerHost
+		overrideSettings["custom-rendezvous-server"] = c.ServerHost
 	}
 	if c.ServerKey != "" {
-		payload["key"] = c.ServerKey
+		overrideSettings["key"] = c.ServerKey
 	}
 	if c.ApiServer != "" {
-		payload["api-server"] = c.ApiServer
+		overrideSettings["api-server"] = c.ApiServer
 	}
 	if c.RelayServer != "" {
-		payload["relay-server"] = c.RelayServer
+		overrideSettings["relay-server"] = c.RelayServer
+	}
+
+	if len(overrideSettings) > 0 {
+		payload["override-settings"] = overrideSettings
 	}
 
 	if len(c.DefaultSettings) > 0 {
 		var ds map[string]string
 		if err := json.Unmarshal(c.DefaultSettings, &ds); err == nil && len(ds) > 0 {
 			payload["default-settings"] = ds
-		}
-	}
-	if len(c.OverrideSettings) > 0 {
-		var os map[string]string
-		if err := json.Unmarshal(c.OverrideSettings, &os); err == nil && len(os) > 0 {
-			payload["override-settings"] = os
 		}
 	}
 

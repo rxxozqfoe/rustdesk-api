@@ -23,7 +23,6 @@ type WorkerJob struct {
 	Arch     string `json:"arch"`
 	// Bundle fields
 	Format        string `json:"format,omitempty"`
-	AppName       string `json:"app_name,omitempty"`
 	CustomTxt     string `json:"custom_txt,omitempty"`      // pre-signed custom.txt content
 	ArtifactS3Key string `json:"artifact_s3_key,omitempty"` // pre-build artifact S3 key for bundle
 	ArtifactDir   string `json:"artifact_dir,omitempty"`    // pre-build artifact local dir for bundle
@@ -108,7 +107,6 @@ func (s *WorkerService) FetchPendingJob(workerName string, platforms []model.Wor
 			Platform:      cc.Platform,
 			Arch:          cc.Arch,
 			Format:        cc.Format,
-			AppName:       cc.AppName,
 			CustomTxt:     customTxt,
 			ArtifactS3Key: artifactS3Key,
 			ArtifactDir:   artifactDir,

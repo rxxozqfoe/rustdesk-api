@@ -342,7 +342,7 @@ func ShareRecordBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 
 func CustomClientDownloadBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 	cont := &admin.CustomClient{HD: hd}
-	rg.GET("/custom-client/download/:id", cont.Download)
+	rg.GET("/custom-client/download/:id/*filename", cont.Download)
 }
 
 func CustomClientBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {

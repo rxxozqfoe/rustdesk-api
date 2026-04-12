@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
@@ -48,7 +49,15 @@ func (s *PreBuildService) List(page, pageSize uint, where func(tx *gorm.DB)) *mo
 
 func (s *PreBuildService) Delete(job *model.PreBuild) error {
 	if job.LogPath != "" {
-		os.Remove(job.LogPath)
+		if strings.HasPrefix(job.LogPath, "logs/") {
+			// Completed job: LogPath is an S3 key
+			if s.ctx.S3 != nil {
+				s.ctx.S3.Delete(context.Background(), job.LogPath)
+			}
+		} else {
+			// In-progress job: LogPath is a local file
+			os.Remove(job.LogPath)
+		}
 	}
 	return s.ctx.DB.Delete(job).Error
 }
