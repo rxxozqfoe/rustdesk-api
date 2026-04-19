@@ -47,9 +47,11 @@ type Config struct {
 	Cache      Cache
 	Oss        Oss
 	Jwt        Jwt
-	Rustdesk   Rustdesk
-	Proxy      Proxy
-	Ldap       Ldap
+	Rustdesk     Rustdesk
+	Proxy        Proxy
+	Ldap         Ldap
+	S3     S3     `mapstructure:"s3"`
+	Worker Worker `mapstructure:"worker"`
 }
 
 func (a *Admin) Init() {

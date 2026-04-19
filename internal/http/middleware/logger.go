@@ -45,6 +45,12 @@ func Logger(log *logger.Logger, loggerCfg config.Logger) gin.HandlerFunc {
 			return
 		}
 
+		// Skip logging for file download endpoints (binary stream, not useful in logs)
+		if strings.Contains(path, "/custom-client/download/") {
+			c.Next()
+			return
+		}
+
 		start := time.Now()
 
 		// Read request body

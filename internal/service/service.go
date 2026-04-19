@@ -5,6 +5,7 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/jwt"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
+	"github.com/lejianwen/rustdesk-api/v2/internal/lib/s3"
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 	"gorm.io/gorm"
 )
@@ -19,6 +20,7 @@ type ServiceContext struct {
 	Logger   *logger.Logger
 	Jwt      *jwt.Jwt
 	Lock     lock.Locker
+	S3       *s3.Client // nil when S3 is not configured
 	Services *Service
 }
 
@@ -37,10 +39,15 @@ type Service struct {
 	*AppService
 	*StrategyService
 	*PeerCommandService
+	*CustomClientService
+	*BuildArtifactService
+	*PreBuildService
+	*WorkerService
+	*WorkerRegistryService
 }
 
-func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Locker) *Service {
-	sc := &ServiceContext{Config: c, DB: g, Logger: l, Jwt: j, Lock: lo}
+func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Locker, s3c *s3.Client) *Service {
+	sc := &ServiceContext{Config: c, DB: g, Logger: l, Jwt: j, Lock: lo, S3: s3c}
 	s := &Service{
 		UserService:        &UserService{ctx: sc},
 		AddressBookService: &AddressBookService{ctx: sc},
@@ -54,8 +61,13 @@ func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Loc
 		ServerCmdService:   &ServerCmdService{ctx: sc},
 		LdapService:        &LdapService{ctx: sc},
 		AppService:         &AppService{},
-		StrategyService:    &StrategyService{ctx: sc},
-		PeerCommandService: &PeerCommandService{ctx: sc},
+		StrategyService:      &StrategyService{ctx: sc},
+		PeerCommandService:   &PeerCommandService{ctx: sc},
+		CustomClientService:  &CustomClientService{ctx: sc},
+		BuildArtifactService: &BuildArtifactService{ctx: sc},
+		PreBuildService:      NewPreBuildService(sc),
+		WorkerService:        &WorkerService{ctx: sc},
+		WorkerRegistryService: &WorkerRegistryService{ctx: sc},
 	}
 	sc.Services = s // tie the knot so siblings can reach each other via ctx.Services
 	return s

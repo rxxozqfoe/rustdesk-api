@@ -27,6 +27,9 @@ func Init(g *gin.Engine, hd *deps.HandlerDeps) {
 
 	ConfigBind(adg, hd)
 
+	// Public (no auth) endpoints
+	CustomClientDownloadBind(adg, hd)
+
 	adg.Use(middleware.BackendUserAuth(users))
 	UserBind(adg, hd)
 	GroupBind(adg, hd)
@@ -46,6 +49,10 @@ func Init(g *gin.Engine, hd *deps.HandlerDeps) {
 	RustdeskCmdBind(adg, hd)
 	DeviceGroupBind(adg, hd)
 	StrategyBind(adg, hd)
+	CustomClientBind(adg, hd)
+	BuildArtifactBind(adg, hd)
+	PreBuildBind(adg, hd)
+	WorkerStatusBind(adg, hd)
 }
 
 func RustdeskCmdBind(adg *gin.RouterGroup, hd *deps.HandlerDeps) {
@@ -330,5 +337,57 @@ func ShareRecordBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
 		aR.GET("/list", cont.List)
 		aR.POST("/delete", cont.Delete)
 		aR.POST("/batchDelete", cont.BatchDelete)
+	}
+}
+
+func CustomClientDownloadBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	cont := &admin.CustomClient{HD: hd}
+	rg.GET("/custom-client/download/:id/*filename", cont.Download)
+}
+
+func CustomClientBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	users := hd.Services.UserService
+	cont := &admin.CustomClient{HD: hd}
+	aR := rg.Group("/custom-client").Use(middleware.AdminPrivilege(users))
+	{
+		aR.GET("/list", cont.List)
+		aR.GET("/detail/:id", cont.Detail)
+		aR.POST("/create", cont.Create)
+		aR.POST("/delete", cont.Delete)
+		aR.GET("/preview/:id", cont.Preview)
+	}
+}
+
+func BuildArtifactBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	users := hd.Services.UserService
+	cont := &admin.BuildArtifact{HD: hd}
+	aR := rg.Group("/build-artifact").Use(middleware.AdminPrivilege(users))
+	{
+		aR.GET("/list", cont.List)
+		aR.POST("/delete", cont.Delete)
+	}
+}
+
+func PreBuildBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	users := hd.Services.UserService
+	cont := &admin.PreBuild{HD: hd}
+	aR := rg.Group("/pre-build").Use(middleware.AdminPrivilege(users))
+	{
+		aR.GET("/versions", cont.Versions)
+		aR.POST("/trigger", cont.Trigger)
+		aR.GET("/list", cont.List)
+		aR.GET("/detail/:id", cont.Detail)
+		aR.GET("/log/:id", cont.Log)
+		aR.POST("/cancel/:id", cont.Cancel)
+		aR.POST("/delete", cont.Delete)
+	}
+}
+
+func WorkerStatusBind(rg *gin.RouterGroup, hd *deps.HandlerDeps) {
+	users := hd.Services.UserService
+	cont := &admin.WorkerStatus{HD: hd}
+	aR := rg.Group("/worker").Use(middleware.AdminPrivilege(users))
+	{
+		aR.GET("/list", cont.List)
 	}
 }

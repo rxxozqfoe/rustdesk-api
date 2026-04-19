@@ -73,6 +73,19 @@ jwt:
   key: ""
   expire-duration: 168h
 
+s3:
+  endpoint: "" # e.g. "minio:9000" or "s3.amazonaws.com" (empty = disabled)
+  access-key: ""
+  secret-key: ""
+  bucket: "rustdesk-builds"
+  region: "us-east-1"
+  use-ssl: false
+
+worker:
+  token: "" # shared secret for build-worker authentication (empty = worker disabled)
+  heartbeat-timeout: 15 # seconds before a worker is considered offline
+  log-cache-dir: "./data/build-logs" # local cache for in-progress build logs
+
 ldap:
   enable: false
   url: "ldap://ldap.example.com:389"

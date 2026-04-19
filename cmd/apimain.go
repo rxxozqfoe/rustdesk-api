@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/orm"
+	libs3 "github.com/lejianwen/rustdesk-api/v2/internal/lib/s3"
 	"github.com/lejianwen/rustdesk-api/v2/internal/lib/upload"
 	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 	"github.com/lejianwen/rustdesk-api/v2/internal/service"
@@ -26,7 +28,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const DatabaseVersion = 266
+const DatabaseVersion = 267
 
 // @title 管理系统API
 // @version 1.0
@@ -228,8 +230,28 @@ func InitApp() {
 	jwtHandler := jwt.NewJwt(a.Config.Jwt.Key, a.Config.Jwt.ExpireDuration)
 	locker := lock.NewLocal()
 
+	// S3 client (nil when S3 is not configured)
+	s3Client, err := libs3.New(&a.Config.S3)
+	if err != nil {
+		a.Logger.Fatal("S3 init failed: " + err.Error())
+	}
+	if s3Client != nil {
+		if err := s3Client.EnsureBucket(context.Background(), a.Config.S3.Region); err != nil {
+			a.Logger.Warn("S3 bucket check failed (will retry on use): " + err.Error())
+		} else {
+			a.Logger.Info("S3 storage enabled, bucket: " + a.Config.S3.Bucket)
+		}
+	}
+
+	// Validate worker config at startup
+	if a.Config.Worker.Enabled() {
+		if a.Config.Worker.LogCacheDir == "" {
+			a.Logger.Fatal("worker.token is set but worker.log-cache-dir is not configured")
+		}
+	}
+
 	// Service aggregate (with back-pointer — see service.New)
-	svcs := service.New(&a.Config, db, a.Logger, jwtHandler, locker)
+	svcs := service.New(&a.Config, db, a.Logger, jwtHandler, locker, s3Client)
 
 	// Login limiter (HTTP-layer concern)
 	a.Logger.Info(fmt.Sprintf("CaptchaThreshold: %d, BanThreshold: %d", a.Config.App.CaptchaThreshold, a.Config.App.BanThreshold))
@@ -250,6 +272,7 @@ func InitApp() {
 		Localizer:    deps.LocalizerFunc(localizer),
 		LoginLimiter: limiter,
 		Oss:          oss,
+		S3:           s3Client,
 		Services:     svcs,
 	}
 
@@ -358,6 +381,10 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.StrategyPeer{},
 		&model.StrategyUser{},
 		&model.StrategyDeviceGroup{},
+		&model.CustomClient{},
+		&model.BuildArtifact{},
+		&model.PreBuild{},
+		&model.Worker{},
 	)
 	if err != nil {
 		a.Logger.Error("migrate err :=>", err)
