@@ -9,42 +9,33 @@ import (
 func TestLocal_GetLock(t *testing.T) {
 	l := NewLocal()
 	wg := sync.WaitGroup{}
-	wg.Add(3)
-	var l1 *sync.Mutex
-	var l2 *sync.Mutex
-	var l3 *sync.Mutex
+	const n = 3
+	wg.Add(n)
+	locks := make([]*sync.Mutex, n)
 	i := 0
-	go func() {
-		l1 = l.GetLock("key")
-		fmt.Println("l1", l1, i)
-		l1.Lock()
-		fmt.Println("l1", i)
-		i++
-		l1.Unlock()
-		wg.Done()
-	}()
-	go func() {
-		l2 = l.GetLock("key")
-		fmt.Println("l2", l2, i)
-		l2.Lock()
-		fmt.Println("l2", i)
-		i++
-		l2.Unlock()
-		wg.Done()
-	}()
-	go func() {
-		l3 = l.GetLock("key")
-		fmt.Println("l3", l3, i)
-		l3.Lock()
-		fmt.Println("l3", i)
-		i++
-		l3.Unlock()
-		wg.Done()
-	}()
+	for j := 0; j < n; j++ {
+		go func(idx int) {
+			defer wg.Done()
+			lk := l.GetLock("key")
+			locks[idx] = lk
+			// The shared mutex returned by GetLock must serialize i++.
+			lk.Lock()
+			i++
+			lk.Unlock()
+		}(j)
+	}
 	wg.Wait()
 
-	fmt.Println(l1, l2, l3)
-	fmt.Println(l1 == l2, l2 == l3)
+	// GetLock must return the same mutex for the same key.
+	for _, lk := range locks {
+		if lk != locks[0] {
+			t.Fatalf("GetLock returned different mutexes for the same key")
+		}
+	}
+	// Every increment ran under that shared mutex, so none were lost.
+	if i != n {
+		t.Fatalf("expected i == %d, got %d", n, i)
+	}
 }
 
 func TestLocal_Lock(t *testing.T) {
