@@ -3,7 +3,7 @@
 # ---- Build stage ----
 # CGO is required by github.com/mattn/go-sqlite3. We build a fully static
 # binary against musl so the runtime image can still be distroless/static.
-FROM golang:1.25.9-alpine@sha256:7a00384194cf2cb68924bbb918d675f1517357433c8541bac0ab2f929b9d5447 AS builder
+FROM golang:1.26-alpine@sha256:f23e8b227fb4493eabe03bede4d5a32d04092da71962f1fb79b5f7d1e6c2a17f AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
         -o /out/apimain ./cmd/apimain.go
 
 # ---- Runtime stage ----
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:a9329520abc449e3b14d5bc3a6ffae065bdde0f02667fa10880c49b35c109fd1
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:d093aa3e30dbadd3efe1310db061a14da60299baff8450a17fe0ccc514a16639
 
 WORKDIR /app
 

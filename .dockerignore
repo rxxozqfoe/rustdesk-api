@@ -27,3 +27,17 @@ release/
 bin/
 *.exe
 *.out
+
+# Web client (web_hbb) build tooling. Only the prebuilt resources/web/js/dist
+# is served at runtime (StaticFS /webclient); the lockfiles/src/configs are
+# build-time only and just drag known-CVE npm advisories into the image.
+resources/web/js/node_modules/
+resources/web/js/src/
+resources/web/js/package.json
+resources/web/js/package-lock.json
+resources/web/js/yarn.lock
+resources/web/js/tsconfig.json
+resources/web/js/vite.config.js
+resources/web/js/ts_proto.py
+resources/web/js/gen_js_from_hbb.py
+resources/web/js/.yarnrc.yml
