@@ -58,10 +58,6 @@ type r struct {
 	B string `json:"b"`
 	R *rr    `json:"r"`
 }
-type r2 struct {
-	A string `json:"a"`
-	B string `json:"b"`
-}
 type rr struct {
 	AA string `json:"aa"`
 	BB string `json:"bb"`
@@ -87,7 +83,7 @@ func TestSimpleCache_GetStruct(t *testing.T) {
 	err2 := s.Get("key", res)
 	fmt.Println("res", res)
 	if err2 != nil {
-		t.Fatalf("读取失败" + err2.Error())
+		t.Fatalf("读取失败%v", err2)
 
 	}
 
@@ -99,7 +95,7 @@ func TestSimpleCache_GetStruct(t *testing.T) {
 	err3 := s.Get("key", res2)
 	fmt.Println("res2", res2, res2.R.AA, res2.R.BB)
 	if err3 != nil {
-		t.Fatalf("读取失败" + err3.Error())
+		t.Fatalf("读取失败%v", err3)
 
 	}
 	//if reflect.DeepEqual(res, old) {

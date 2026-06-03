@@ -112,12 +112,12 @@ func (ct *Login) Captcha(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "NoCaptchaRequired"))
 		return
 	}
-	err, captcha := loginLimiter.RequireCaptcha()
+	captcha, err := loginLimiter.RequireCaptcha()
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "CaptchaError")+err.Error())
 		return
 	}
-	err, b64 := loginLimiter.DrawCaptcha(captcha.Content)
+	b64, err := loginLimiter.DrawCaptcha(captcha.Content)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "CaptchaError")+err.Error())
 		return

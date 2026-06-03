@@ -83,7 +83,7 @@ func (j *Jobs) FetchPending(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	job, err := j.HD.Services.WorkerService.FetchPendingJob(req.Name, req.Platforms)
+	job, err := j.HD.Services.FetchPendingJob(req.Name, req.Platforms)
 	if err != nil {
 		response.Fail(c, 101, err.Error())
 		return
@@ -134,7 +134,7 @@ func (j *Jobs) Start(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerService.StartJob(uint(id), req.Type); err != nil {
+	if err := j.HD.Services.StartJob(uint(id), req.Type); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}
@@ -152,7 +152,7 @@ func (j *Jobs) AppendLog(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerService.AppendLog(uint(id), req.Content); err != nil {
+	if err := j.HD.Services.AppendLog(uint(id), req.Content); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}

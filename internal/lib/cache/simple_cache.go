@@ -9,10 +9,8 @@ import (
 // 此处实现了一个简单的缓存，用于测试
 // SimpleCache is a simple cache implementation
 type SimpleCache struct {
-	data      map[string]interface{}
-	mu        sync.Mutex
-	maxBytes  int64
-	usedBytes int64
+	data map[string]interface{}
+	mu   sync.Mutex
 }
 
 func (s *SimpleCache) Get(key string, value interface{}) error {

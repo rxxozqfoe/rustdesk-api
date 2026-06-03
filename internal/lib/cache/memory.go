@@ -176,11 +176,6 @@ func (m *MemoryCache) startEviction() {
 	}()
 }
 
-// stopEviction 停止定时清理
-func (m *MemoryCache) stopEviction() {
-	close(m.quit)
-}
-
 // deleteItem removes a key from the cache.
 func (m *MemoryCache) deleteItem(item *CacheItem) {
 	m.ll.Remove(item.ListEle)
