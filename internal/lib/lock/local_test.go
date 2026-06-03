@@ -45,7 +45,6 @@ func TestLocal_GetLock(t *testing.T) {
 
 	fmt.Println(l1, l2, l3)
 	fmt.Println(l1 == l2, l2 == l3)
-	fmt.Println(&sync.Mutex{} == &sync.Mutex{})
 }
 
 func TestLocal_Lock(t *testing.T) {

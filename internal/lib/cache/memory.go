@@ -60,7 +60,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 func (m *MemoryCache) Get(key string, value interface{}) error {
 	// 使用反射将存储的值设置到传入的指针变量中
 	val := reflect.ValueOf(value)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return errors.New("value must be a pointer")
 	}
 	//设为空值

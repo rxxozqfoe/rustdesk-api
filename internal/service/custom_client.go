@@ -31,7 +31,7 @@ func (s *CustomClientService) List(page, pageSize uint, where func(tx *gorm.DB))
 // Create saves the record with status=bundling for the build-worker to pick up.
 func (s *CustomClientService) Create(c *model.CustomClient) error {
 	// Validate pre-built artifact exists
-	ba := s.ctx.Services.BuildArtifactService.FindByPlatformArchVersion(c.Platform, c.Arch, c.Version)
+	ba := s.ctx.Services.FindByPlatformArchVersion(c.Platform, c.Arch, c.Version)
 	if ba.Id == 0 {
 		return fmt.Errorf("no pre-built binary for %s/%s v%s — please run a pre-build job first", c.Platform, c.Arch, c.Version)
 	}
@@ -42,10 +42,14 @@ func (s *CustomClientService) Create(c *model.CustomClient) error {
 
 func (s *CustomClientService) Delete(c *model.CustomClient) error {
 	if c.FilePath != "" {
-		os.Remove(c.FilePath)
+		if err := os.Remove(c.FilePath); err != nil && !os.IsNotExist(err) {
+			s.ctx.Logger.Warnf("remove custom client file fail: %s %v", c.FilePath, err)
+		}
 	}
 	if c.S3Key != "" && s.ctx.S3 != nil {
-		s.ctx.S3.Delete(context.Background(), c.S3Key)
+		if err := s.ctx.S3.Delete(context.Background(), c.S3Key); err != nil {
+			s.ctx.Logger.Warnf("delete custom client from S3 fail: %s %v", c.S3Key, err)
+		}
 	}
 	return s.ctx.DB.Delete(c).Error
 }

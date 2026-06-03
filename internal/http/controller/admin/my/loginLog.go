@@ -74,7 +74,7 @@ func (ct *LoginLog) Delete(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
-	err := ct.HD.Services.LoginLogService.SoftDelete(l)
+	err := ct.HD.Services.SoftDelete(l)
 	if err == nil {
 		response.Success(c, nil)
 		return
@@ -104,11 +104,10 @@ func (ct *LoginLog) BatchDelete(c *gin.Context) {
 		return
 	}
 	u := helper.CurUser(c)
-	err := ct.HD.Services.LoginLogService.BatchSoftDelete(u.Id, f.Ids)
+	err := ct.HD.Services.BatchSoftDelete(u.Id, f.Ids)
 	if err == nil {
 		response.Success(c, nil)
 		return
 	}
 	response.Fail(c, 101, err.Error())
-	return
 }

@@ -76,7 +76,9 @@ func BenchmarkRSet(b *testing.B) {
 	})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		rc.Set("123", "{dsv}", 1000)
+		if err := rc.Set("123", "{dsv}", 1000); err != nil {
+			b.Fatalf("写入失败%v", err)
+		}
 	}
 }
 
@@ -89,6 +91,8 @@ func BenchmarkRGet(b *testing.B) {
 	b.ResetTimer()
 	v := ""
 	for i := 0; i < b.N; i++ {
-		rc.Get("123", &v)
+		if err := rc.Get("123", &v); err != nil {
+			b.Fatalf("读取失败%v", err)
+		}
 	}
 }

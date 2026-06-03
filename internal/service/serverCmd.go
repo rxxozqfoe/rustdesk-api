@@ -66,7 +66,7 @@ func (is *ServerCmdService) SendSocketCmd(ty string, port int, cmd string) (stri
 		is.ctx.Logger.Debugf("%s connect to id server failed: %v", ty, err)
 		return "", err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	//发送命令
 	_, err = conn.Write([]byte(cmd))
 	if err != nil {

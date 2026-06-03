@@ -79,7 +79,7 @@ var resetPwdCmd = &cobra.Command{
 			appCtx.Logger.Warn("user not found! ")
 			return
 		}
-		if err := services.UserService.UpdatePassword(admin, pwd); err != nil {
+		if err := services.UpdatePassword(admin, pwd); err != nil {
 			appCtx.Logger.Error("reset password fail! ", err)
 			return
 		}
@@ -109,7 +109,7 @@ var resetUserPwdCmd = &cobra.Command{
 			appCtx.Logger.Warn("user not found! ")
 			return
 		}
-		if err := services.UserService.UpdatePassword(u, pwd); err != nil {
+		if err := services.UpdatePassword(u, pwd); err != nil {
 			appCtx.Logger.Warn("reset password fail! ", err)
 			return
 		}
@@ -285,7 +285,7 @@ func InitApp() {
 	DatabaseAutoUpdate(db, a, svcs, localizer)
 
 	// Close stale audit connections from previous server runs
-	if err := svcs.AuditService.CloseStaleConns(); err != nil {
+	if err := svcs.CloseStaleConns(); err != nil {
 		a.Logger.Errorf("failed to close stale audit connections: %v", err)
 	}
 
@@ -395,16 +395,20 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 	if vc == 1 {
 		loc := localizer("")
 		defaultGroup, _ := loc.LocalizeMessage(&i18n.Message{ID: "DefaultGroup"})
-		svcs.GroupService.Create(&model.Group{
+		if err := svcs.GroupService.Create(&model.Group{
 			Name: defaultGroup,
 			Type: model.GroupTypeDefault,
-		})
+		}); err != nil {
+			a.Logger.Error("create default group err :=>", err)
+		}
 
 		shareGroup, _ := loc.LocalizeMessage(&i18n.Message{ID: "ShareGroup"})
-		svcs.GroupService.Create(&model.Group{
+		if err := svcs.GroupService.Create(&model.Group{
 			Name: shareGroup,
 			Type: model.GroupTypeShare,
-		})
+		}); err != nil {
+			a.Logger.Error("create share group err :=>", err)
+		}
 
 		isAdmin := true
 		admin := &model.User{

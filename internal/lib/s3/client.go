@@ -58,7 +58,7 @@ func (c *Client) UploadFile(ctx context.Context, key, filePath, contentType stri
 	if err != nil {
 		return "", fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	info, err := f.Stat()
 	if err != nil {

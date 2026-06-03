@@ -65,7 +65,7 @@ func (ct *Login) Login(c *gin.Context) {
 		}
 	}
 
-	u := ct.HD.Services.UserService.InfoByUsernamePassword(f.Username, f.Password)
+	u := ct.HD.Services.InfoByUsernamePassword(f.Username, f.Password)
 
 	if u.Id == 0 {
 		ct.HD.Logger.Warn(fmt.Sprintf("Login Fail: %s %s %s", "UsernameOrPasswordError", c.RemoteIP(), clientIp))
@@ -78,7 +78,7 @@ func (ct *Login) Login(c *gin.Context) {
 		return
 	}
 
-	if !ct.HD.Services.UserService.CheckUserEnable(u) {
+	if !ct.HD.Services.CheckUserEnable(u) {
 		if needCaptcha {
 			response.Fail(c, 110, response.TranslateMsg(c, "UserDisabled"))
 			return
@@ -87,7 +87,7 @@ func (ct *Login) Login(c *gin.Context) {
 		return
 	}
 
-	ut := ct.HD.Services.UserService.Login(u, &model.LoginLog{
+	ut := ct.HD.Services.Login(u, &model.LoginLog{
 		UserId:   u.Id,
 		Client:   model.LoginLogClientWebAdmin,
 		Uuid:     "", //must be empty
@@ -143,7 +143,9 @@ func (ct *Login) Logout(c *gin.Context) {
 	u := helper.CurUser(c)
 	token, ok := c.Get("token")
 	if ok {
-		ct.HD.Services.UserService.Logout(u, token.(string))
+		if err := ct.HD.Services.Logout(u, token.(string)); err != nil {
+			ct.HD.Logger.Warn(fmt.Sprintf("Logout Fail: %s %v", u.Username, err))
+		}
 	}
 	response.Success(c, nil)
 }
@@ -165,7 +167,7 @@ func (ct *Login) LoginOptions(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "LoginBanned"))
 		return
 	}
-	ops := ct.HD.Services.OauthService.GetOauthProviders()
+	ops := ct.HD.Services.GetOauthProviders()
 	response.Success(c, gin.H{
 		"ops":          ops,
 		"register":     ct.HD.Config.App.Register,
@@ -192,13 +194,13 @@ func (ct *Login) OidcAuth(c *gin.Context) {
 		return
 	}
 
-	err, state, verifier, nonce, url := ct.HD.Services.OauthService.BeginAuth(f.Op)
+	state, verifier, nonce, url, err := ct.HD.Services.BeginAuth(f.Op)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, err.Error()))
 		return
 	}
 
-	ct.HD.Services.OauthService.SetOauthCache(state, &service.OauthCacheItem{
+	ct.HD.Services.SetOauthCache(state, &service.OauthCacheItem{
 		Action:     service.OauthActionTypeLogin,
 		Op:         f.Op,
 		Id:         f.Id,
@@ -229,7 +231,7 @@ func (ct *Login) OidcAuthQuery(c *gin.Context) {
 	code := c.Query("code")
 	id := c.Query("id")
 	uuid := c.Query("uuid")
-	result := ct.HD.Services.OauthService.HandleOidcAuthQuery(code, id, uuid, c.ClientIP())
+	result := ct.HD.Services.HandleOidcAuthQuery(code, id, uuid, c.ClientIP())
 	if result.AuthInPrg {
 		response.Fail(c, 101, response.TranslateMsg(c, "OauthInProgress"))
 		return

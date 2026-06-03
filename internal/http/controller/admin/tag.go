@@ -31,7 +31,7 @@ func (ct *Tag) Detail(c *gin.Context) {
 	iid, _ := strconv.Atoi(id)
 	t := ct.HD.Services.TagService.InfoById(uint(iid))
 	u := helper.CurUser(c)
-	if !ct.HD.Services.UserService.IsAdmin(u) && t.UserId != u.Id {
+	if !ct.HD.Services.IsAdmin(u) && t.UserId != u.Id {
 		response.Fail(c, 101, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
@@ -40,7 +40,6 @@ func (ct *Tag) Detail(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // Create 创建标签

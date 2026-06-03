@@ -31,8 +31,7 @@ func TestSimpleCache(t *testing.T) {
 	fmt.Println(b)
 
 	ab.A = "aa"
-	ab2 := st{}
-	ab2 = (items["ab"]).(st)
+	ab2 := (items["ab"]).(st)
 	fmt.Println(ab2, reflect.TypeOf(ab2))
 
 }

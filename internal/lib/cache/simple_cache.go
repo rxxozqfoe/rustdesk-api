@@ -19,7 +19,7 @@ func (s *SimpleCache) Get(key string, value interface{}) error {
 
 	// 使用反射将存储的值设置到传入的指针变量中
 	val := reflect.ValueOf(value)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return errors.New("value must be a pointer")
 	}
 	v, ok := s.data[key]
@@ -45,7 +45,7 @@ func (s *SimpleCache) Set(key string, value interface{}, exp int) error {
 	defer s.mu.Unlock()
 	// 检查传入的值是否是指针，如果是则取其值
 	val := reflect.ValueOf(value)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 

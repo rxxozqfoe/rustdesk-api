@@ -89,13 +89,13 @@ func (a *Ab) UpAb(c *gin.Context) {
 	}
 	user := helper.CurUser(c)
 
-	err = a.HD.Services.AddressBookService.UpdateAddressBook(abd.Peers, user.Id)
+	err = a.HD.Services.UpdateAddressBook(abd.Peers, user.Id)
 	if err != nil {
 		response.Error(c, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
 	}
 
-	a.HD.Services.TagService.UpdateTags(user.Id, tc)
+	a.HD.Services.UpdateTags(user.Id, tc)
 
 	c.JSON(http.StatusOK, nil)
 }
@@ -121,7 +121,7 @@ func (a *Ab) PTags(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserReadPrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserReadPrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
@@ -158,12 +158,12 @@ func (a *Ab) TagAdd(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserWritePrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserWritePrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
 
-	tag := a.HD.Services.TagService.InfoByUserIdAndNameAndCollectionId(uid, t.Name, cid)
+	tag := a.HD.Services.InfoByUserIdAndNameAndCollectionId(uid, t.Name, cid)
 	if tag != nil && tag.Id != 0 {
 		response.Error(c, response.TranslateMsg(c, "ItemExists"))
 		return
@@ -206,17 +206,17 @@ func (a *Ab) TagRename(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserWritePrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserWritePrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
 
-	tag := a.HD.Services.TagService.InfoByUserIdAndNameAndCollectionId(uid, t.Old, cid)
+	tag := a.HD.Services.InfoByUserIdAndNameAndCollectionId(uid, t.Old, cid)
 	if tag == nil || tag.Id == 0 {
 		response.Error(c, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
-	ntag := a.HD.Services.TagService.InfoByUserIdAndNameAndCollectionId(uid, t.New, cid)
+	ntag := a.HD.Services.InfoByUserIdAndNameAndCollectionId(uid, t.New, cid)
 	if ntag != nil && ntag.Id != 0 {
 		response.Error(c, response.TranslateMsg(c, "ItemExists"))
 		return
@@ -257,12 +257,12 @@ func (a *Ab) TagUpdate(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserWritePrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserWritePrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
 
-	tag := a.HD.Services.TagService.InfoByUserIdAndNameAndCollectionId(uid, t.Name, cid)
+	tag := a.HD.Services.InfoByUserIdAndNameAndCollectionId(uid, t.Name, cid)
 	if tag == nil || tag.Id == 0 {
 		response.Error(c, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -305,13 +305,13 @@ func (a *Ab) TagDel(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserFullControlPrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserFullControlPrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
 
 	for _, name := range *t {
-		tag := a.HD.Services.TagService.InfoByUserIdAndNameAndCollectionId(uid, name, cid)
+		tag := a.HD.Services.InfoByUserIdAndNameAndCollectionId(uid, name, cid)
 		if tag == nil || tag.Id == 0 {
 			response.Error(c, response.TranslateMsg(c, "ItemNotFound"))
 			return
@@ -401,7 +401,7 @@ func (a *Ab) SharedProfiles(c *gin.Context) {
 	var res []*api.SharedProfilesPayload
 
 	user := helper.CurUser(c)
-	myAbCollectionList := a.HD.Services.AddressBookService.ListCollectionByUserId(user.Id)
+	myAbCollectionList := a.HD.Services.ListCollectionByUserId(user.Id)
 	for _, ab := range myAbCollectionList.AddressBookCollection {
 		res = append(res, &api.SharedProfilesPayload{
 			Guid:  a.ComposeGuid(user.GroupId, user.Id, ab.Id),
@@ -413,7 +413,7 @@ func (a *Ab) SharedProfiles(c *gin.Context) {
 
 	allAbIds := make(map[uint]int) //用map去重，并保留最大Rule
 	allUserIds := make(map[uint]*model.User)
-	rules := a.HD.Services.AddressBookService.CollectionReadRules(user)
+	rules := a.HD.Services.CollectionReadRules(user)
 	for _, rule := range rules {
 		//先判断是否存在
 		r, ok := allAbIds[rule.CollectionId]
@@ -429,10 +429,10 @@ func (a *Ab) SharedProfiles(c *gin.Context) {
 
 	}
 	abids := utils.Keys(allAbIds)
-	collections := a.HD.Services.AddressBookService.ListCollectionByIds(abids)
+	collections := a.HD.Services.ListCollectionByIds(abids)
 
 	ids := utils.Keys(allUserIds)
-	allUsers := a.HD.Services.UserService.ListByIds(ids)
+	allUsers := a.HD.Services.ListByIds(ids)
 	for _, u := range allUsers {
 		allUserIds[u.Id] = u
 	}
@@ -529,7 +529,7 @@ func (a *Ab) CheckGuid(cu *model.User, guid string) (gid, uid, cid uint, err err
 		return
 	}
 	if cid > 0 {
-		c := a.HD.Services.AddressBookService.CollectionInfoById(cid)
+		c := a.HD.Services.CollectionInfoById(cid)
 		if c == nil || c.Id == 0 {
 			err = errors.New("ParamsError")
 			return
@@ -574,7 +574,7 @@ func (a *Ab) Peers(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserReadPrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserReadPrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
@@ -616,7 +616,7 @@ func (a *Ab) PeerAdd(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserWritePrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserWritePrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
@@ -626,15 +626,15 @@ func (a *Ab) PeerAdd(c *gin.Context) {
 	ab := f.ToAddressBook()
 	ab.CollectionId = cid
 	if ab.Platform == "" || ab.Username == "" || ab.Hostname == "" {
-		peer := a.HD.Services.PeerService.FindById(ab.Id)
+		peer := a.HD.Services.FindById(ab.Id)
 		if peer.RowId != 0 {
-			ab.Platform = a.HD.Services.AddressBookService.PlatformFromOs(peer.Os)
+			ab.Platform = a.HD.Services.PlatformFromOs(peer.Os)
 			ab.Username = peer.Username
 			ab.Hostname = peer.Hostname
 		}
 	}
 
-	err = a.HD.Services.AddressBookService.AddAddressBook(ab)
+	err = a.HD.Services.AddAddressBook(ab)
 	if err != nil {
 		response.Error(c, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -669,13 +669,13 @@ func (a *Ab) PeerDel(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserFullControlPrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserFullControlPrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
 
 	for _, id := range *f {
-		ab := a.HD.Services.AddressBookService.InfoByUserIdAndIdAndCid(uid, id, cid)
+		ab := a.HD.Services.InfoByUserIdAndIdAndCid(uid, id, cid)
 		if ab == nil || ab.RowId == 0 {
 			response.Error(c, response.TranslateMsg(c, "ItemNotFound"))
 			return
@@ -718,7 +718,7 @@ func (a *Ab) PeerUpdate(c *gin.Context) {
 	}
 
 	//check privileges
-	if !a.HD.Services.AddressBookService.CheckUserWritePrivilege(u, uid, cid) {
+	if !a.HD.Services.CheckUserWritePrivilege(u, uid, cid) {
 		response.Error(c, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
@@ -731,7 +731,7 @@ func (a *Ab) PeerUpdate(c *gin.Context) {
 	}
 	fidstr := fid.(string)
 
-	ab := a.HD.Services.AddressBookService.InfoByUserIdAndIdAndCid(uid, fidstr, cid)
+	ab := a.HD.Services.InfoByUserIdAndIdAndCid(uid, fidstr, cid)
 	if ab == nil || ab.RowId == 0 {
 		response.Error(c, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -748,7 +748,7 @@ func (a *Ab) PeerUpdate(c *gin.Context) {
 	if tags, _ok := f["tags"]; _ok {
 		f["tags"], _ = json.Marshal(tags)
 	}
-	err = a.HD.Services.AddressBookService.UpdateByMap(ab, f)
+	err = a.HD.Services.UpdateByMap(ab, f)
 	if err != nil {
 		response.Error(c, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return

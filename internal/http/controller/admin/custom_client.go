@@ -145,7 +145,7 @@ func (ct *CustomClient) Download(c *gin.Context) {
 	if cc.S3Key != "" && ct.HD.S3 != nil {
 		reader, err := ct.HD.S3.GetObject(context.Background(), cc.S3Key)
 		if err == nil {
-			defer reader.Close()
+			defer func() { _ = reader.Close() }()
 
 			contentType := "application/octet-stream"
 			switch cc.Format {
@@ -186,7 +186,7 @@ func (ct *CustomClient) Preview(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
-	txt, err := ct.HD.Services.CustomClientService.GenerateCustomTxt(cc)
+	txt, err := ct.HD.Services.GenerateCustomTxt(cc)
 	if err != nil {
 		response.Fail(c, 101, fmt.Sprintf("Failed to generate custom.txt: %v", err))
 		return

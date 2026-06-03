@@ -35,7 +35,6 @@ func (ct *LoginLog) Detail(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // List 列表
@@ -130,5 +129,4 @@ func (ct *LoginLog) BatchDelete(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, err.Error())
-	return
 }

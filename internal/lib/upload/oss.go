@@ -81,11 +81,15 @@ func (oc *Oss) GetPolicyToken(uploadDir string) string {
 
 	//calucate signature
 	result, err := json.Marshal(config)
+	if err != nil {
+		fmt.Println("policy json err:", err)
+	}
 	debyte := base64.StdEncoding.EncodeToString(result)
 	h := hmac.New(func() hash.Hash {
 		return sha1.New()
 	}, []byte(oc.AccessKeySecret))
-	io.WriteString(h, debyte)
+	// io.WriteString on an hmac hash never returns an error; ignore it.
+	_, _ = io.WriteString(h, debyte)
 	signedStr := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
 	var callbackParam CallbackParam
@@ -174,7 +178,7 @@ func getPublicKey(r *http.Request) ([]byte, error) {
 		fmt.Printf("Read PublicKey Content from URL failed : %s \n", err.Error())
 		return bytePublicKey, err
 	}
-	defer responsePublicKeyURL.Body.Close()
+	defer func() { _ = responsePublicKeyURL.Body.Close() }()
 	// fmt.Printf("publicKey={%s}\n", bytePublicKey)
 	return bytePublicKey, nil
 }
@@ -197,7 +201,7 @@ func getMD5FromNewAuthString(r *http.Request) ([]byte, error) {
 	var byteMD5 []byte
 	// Construct the New Auth String from URI+Query+Body
 	bodyContent, err := io.ReadAll(r.Body)
-	r.Body.Close()
+	_ = r.Body.Close()
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyContent))
 	if err != nil {
 		fmt.Printf("Read Request Body failed : %s \n", err.Error())

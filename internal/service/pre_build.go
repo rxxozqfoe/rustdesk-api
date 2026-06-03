@@ -52,11 +52,15 @@ func (s *PreBuildService) Delete(job *model.PreBuild) error {
 		if strings.HasPrefix(job.LogPath, "logs/") {
 			// Completed job: LogPath is an S3 key
 			if s.ctx.S3 != nil {
-				s.ctx.S3.Delete(context.Background(), job.LogPath)
+				if err := s.ctx.S3.Delete(context.Background(), job.LogPath); err != nil {
+					s.ctx.Logger.Warnf("delete pre-build log from S3 fail: %s %v", job.LogPath, err)
+				}
 			}
 		} else {
 			// In-progress job: LogPath is a local file
-			os.Remove(job.LogPath)
+			if err := os.Remove(job.LogPath); err != nil && !os.IsNotExist(err) {
+				s.ctx.Logger.Warnf("remove pre-build log fail: %s %v", job.LogPath, err)
+			}
 		}
 	}
 	return s.ctx.DB.Delete(job).Error
@@ -107,7 +111,9 @@ func (s *PreBuildService) Trigger(version, platform, arch string) (*model.PreBui
 	if logDir == "" {
 		return nil, fmt.Errorf("worker.log-cache-dir is not configured")
 	}
-	os.MkdirAll(logDir, 0755)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create log cache dir %s: %w", logDir, err)
+	}
 	logPath := filepath.Join(logDir, fmt.Sprintf("prebuild_%s_%s_%s_%d.tmp.log", version, platform, arch, time.Now().Unix()))
 
 	job := &model.PreBuild{
@@ -158,10 +164,12 @@ func readLocalLog(path string, offset int64) (string, int64, error) {
 		}
 		return "", 0, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if offset > 0 {
-		f.Seek(offset, io.SeekStart)
+		if _, err := f.Seek(offset, io.SeekStart); err != nil {
+			return "", 0, err
+		}
 	}
 
 	data, err := io.ReadAll(f)
@@ -176,7 +184,7 @@ func (s *PreBuildService) readS3Log(s3Key string, offset int64) (string, int64, 
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to read log from S3: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	data, err := io.ReadAll(reader)
 	if err != nil {

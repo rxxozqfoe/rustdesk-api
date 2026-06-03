@@ -39,7 +39,7 @@ func (d *Device) Cli(c *gin.Context) {
 	curUser := helper.CurUser(c)
 
 	// Find or create the peer
-	peer := d.HD.Services.PeerService.FindById(f.Id)
+	peer := d.HD.Services.FindById(f.Id)
 	if peer == nil || peer.RowId == 0 {
 		peer = &model.Peer{
 			Id:     f.Id,
@@ -55,14 +55,14 @@ func (d *Device) Cli(c *gin.Context) {
 
 	// Update peer fields
 	if f.UserName != "" {
-		u := d.HD.Services.UserService.InfoByUsername(f.UserName)
+		u := d.HD.Services.InfoByUsername(f.UserName)
 		if u != nil && u.Id != 0 {
 			peer.UserId = u.Id
 		}
 	}
 
 	if f.DeviceGroupName != "" {
-		allGroups := d.HD.Services.GroupService.DeviceGroupList(1, 999, nil)
+		allGroups := d.HD.Services.DeviceGroupList(1, 999, nil)
 		for _, g := range allGroups.DeviceGroups {
 			if g.Name == f.DeviceGroupName {
 				peer.GroupId = g.Id
@@ -72,9 +72,11 @@ func (d *Device) Cli(c *gin.Context) {
 	}
 
 	if f.StrategyName != "" {
-		strategy := d.HD.Services.StrategyService.InfoByName(f.StrategyName)
+		strategy := d.HD.Services.InfoByName(f.StrategyName)
 		if strategy != nil && strategy.Id > 0 {
-			d.HD.Services.StrategyService.AssignToPeer(strategy.Id, peer.RowId)
+			if err := d.HD.Services.AssignToPeer(strategy.Id, peer.RowId); err != nil {
+				d.HD.Logger.Warnf("AssignToPeer fail: strategy=%d peer=%d %v", strategy.Id, peer.RowId, err)
+			}
 		}
 	}
 
@@ -97,14 +99,14 @@ func (d *Device) Cli(c *gin.Context) {
 	// Handle address book assignment
 	if f.AddressBookName != "" && peer.UserId != 0 {
 		// Find or create peer in user's personal address book
-		ab := d.HD.Services.AddressBookService.InfoByUserIdAndIdAndCid(peer.UserId, peer.Id, 0)
+		ab := d.HD.Services.InfoByUserIdAndIdAndCid(peer.UserId, peer.Id, 0)
 		if ab == nil || ab.RowId == 0 {
 			ab = &model.AddressBook{
 				Id:       peer.Id,
 				UserId:   peer.UserId,
 				Username: peer.Username,
 				Hostname: peer.Hostname,
-				Platform: d.HD.Services.AddressBookService.PlatformFromOs(peer.Os),
+				Platform: d.HD.Services.PlatformFromOs(peer.Os),
 			}
 		}
 		if f.AddressBookAlias != "" {
@@ -122,7 +124,7 @@ func (d *Device) Cli(c *gin.Context) {
 		}
 
 		if ab.RowId == 0 {
-			err = d.HD.Services.AddressBookService.AddAddressBook(ab)
+			err = d.HD.Services.AddAddressBook(ab)
 		} else {
 			err = d.HD.Services.AddressBookService.Update(ab)
 		}

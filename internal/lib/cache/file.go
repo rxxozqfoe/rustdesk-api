@@ -42,7 +42,8 @@ func (c *FileCache) getValue(key string) (string, error) {
 	}
 	difT := time.Since(fileInfo.ModTime())
 	if difT >= 0 {
-		os.Remove(f)
+		// best-effort cleanup of the expired cache file
+		_ = os.Remove(f)
 		return "", nil
 	}
 	data, err := os.ReadFile(f)

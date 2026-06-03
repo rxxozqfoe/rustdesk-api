@@ -29,13 +29,12 @@ type AddressBookCollection struct {
 func (abc *AddressBookCollection) Detail(c *gin.Context) {
 	id := c.Param("id")
 	iid, _ := strconv.Atoi(id)
-	t := abc.HD.Services.AddressBookService.CollectionInfoById(uint(iid))
+	t := abc.HD.Services.CollectionInfoById(uint(iid))
 	if t.Id > 0 {
 		response.Success(c, t)
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // Create 创建地址簿名称
@@ -65,7 +64,7 @@ func (abc *AddressBookCollection) Create(c *gin.Context) {
 		return
 	}
 	t := f
-	err := abc.HD.Services.AddressBookService.CreateCollection(t)
+	err := abc.HD.Services.CreateCollection(t)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -93,7 +92,7 @@ func (abc *AddressBookCollection) List(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
 		return
 	}
-	res := abc.HD.Services.AddressBookService.ListCollection(query.Page, query.PageSize, func(tx *gorm.DB) {
+	res := abc.HD.Services.ListCollection(query.Page, query.PageSize, func(tx *gorm.DB) {
 		if query.UserId > 0 {
 			tx.Where("user_id = ?", query.UserId)
 		}
@@ -128,7 +127,7 @@ func (abc *AddressBookCollection) Update(c *gin.Context) {
 		return
 	}
 	t := f //f.ToAddressBookCollection()
-	err := abc.HD.Services.AddressBookService.UpdateCollection(t)
+	err := abc.HD.Services.UpdateCollection(t)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -159,12 +158,12 @@ func (abc *AddressBookCollection) Delete(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	ex := abc.HD.Services.AddressBookService.CollectionInfoById(f.Id)
+	ex := abc.HD.Services.CollectionInfoById(f.Id)
 	if ex.Id == 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
-	err := abc.HD.Services.AddressBookService.DeleteCollection(ex)
+	err := abc.HD.Services.DeleteCollection(ex)
 	if err == nil {
 		response.Success(c, nil)
 		return

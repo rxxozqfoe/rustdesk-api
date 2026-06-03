@@ -38,7 +38,7 @@ func (abcr *AddressBookCollectionRule) List(c *gin.Context) {
 	u := helper.CurUser(c)
 	query.UserId = int(u.Id)
 
-	res := abcr.HD.Services.AddressBookService.ListRules(query.Page, query.PageSize, func(tx *gorm.DB) {
+	res := abcr.HD.Services.ListRules(query.Page, query.PageSize, func(tx *gorm.DB) {
 		tx.Where("user_id = ?", query.UserId)
 		if query.CollectionId > 0 {
 			tx.Where("collection_id = ?", query.CollectionId)
@@ -82,7 +82,7 @@ func (abcr *AddressBookCollectionRule) Create(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, msg))
 		return
 	}
-	err := abcr.HD.Services.AddressBookService.CreateRule(t)
+	err := abcr.HD.Services.CreateRule(t)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -94,12 +94,13 @@ func (abcr *AddressBookCollectionRule) CheckForm(u *model.User, t *model.Address
 	if t.UserId != u.Id {
 		return "NoAccess", false
 	}
-	if t.CollectionId > 0 && !abcr.HD.Services.AddressBookService.CheckCollectionOwner(t.UserId, t.CollectionId) {
+	if t.CollectionId > 0 && !abcr.HD.Services.CheckCollectionOwner(t.UserId, t.CollectionId) {
 		return "ParamsError", false
 	}
 
 	//check to_id
-	if t.Type == model.ShareAddressBookRuleTypePersonal {
+	switch t.Type {
+	case model.ShareAddressBookRuleTypePersonal:
 		if t.ToId == t.UserId {
 			return "CannotShareToSelf", false
 		}
@@ -111,7 +112,7 @@ func (abcr *AddressBookCollectionRule) CheckForm(u *model.User, t *model.Address
 		//if tou.GroupId != u.GroupId {
 		//	return "NoAccess", false
 		//}
-	} else if t.Type == model.ShareAddressBookRuleTypeGroup {
+	case model.ShareAddressBookRuleTypeGroup:
 		//非管理员不能分享给其他组
 		//if t.ToId != u.GroupId {
 		//	return "NoAccess", false
@@ -121,11 +122,11 @@ func (abcr *AddressBookCollectionRule) CheckForm(u *model.User, t *model.Address
 		if tog.Id == 0 {
 			return "ItemNotFound", false
 		}
-	} else {
+	default:
 		return "ParamsError", false
 	}
 	// 重复检查
-	ex := abcr.HD.Services.AddressBookService.RuleInfoByToIdAndCid(t.Type, t.ToId, t.CollectionId)
+	ex := abcr.HD.Services.RuleInfoByToIdAndCid(t.Type, t.ToId, t.CollectionId)
 	if t.Id == 0 && ex.Id > 0 {
 		return "ItemExists", false
 	}
@@ -163,7 +164,7 @@ func (abcr *AddressBookCollectionRule) Update(c *gin.Context) {
 	}
 	u := helper.CurUser(c)
 
-	ex := abcr.HD.Services.AddressBookService.RuleInfoById(f.Id)
+	ex := abcr.HD.Services.RuleInfoById(f.Id)
 	if ex.Id == 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -178,7 +179,7 @@ func (abcr *AddressBookCollectionRule) Update(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, msg))
 		return
 	}
-	err := abcr.HD.Services.AddressBookService.UpdateRule(t)
+	err := abcr.HD.Services.UpdateRule(t)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -209,7 +210,7 @@ func (abcr *AddressBookCollectionRule) Delete(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	ex := abcr.HD.Services.AddressBookService.RuleInfoById(f.Id)
+	ex := abcr.HD.Services.RuleInfoById(f.Id)
 	if ex.Id == 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -220,7 +221,7 @@ func (abcr *AddressBookCollectionRule) Delete(c *gin.Context) {
 		return
 	}
 
-	err := abcr.HD.Services.AddressBookService.DeleteRule(ex)
+	err := abcr.HD.Services.DeleteRule(ex)
 	if err == nil {
 		response.Success(c, nil)
 		return

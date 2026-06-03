@@ -48,7 +48,7 @@ func (us *UserService) InfoByOpenid(openid string) *model.User {
 // InfoByUsernamePassword 根据用户名密码取用户信息
 func (us *UserService) InfoByUsernamePassword(username, password string) *model.User {
 	if us.ctx.Config.Ldap.Enable {
-		u, err := us.ctx.Services.LdapService.Authenticate(username, password)
+		u, err := us.ctx.Services.Authenticate(username, password)
 		if err == nil {
 			return u
 		}
@@ -108,7 +108,7 @@ func (us *UserService) Login(u *model.User, llog *model.LoginLog) *model.UserTok
 	llog.UserTokenId = ut.UserId
 	us.ctx.DB.Create(llog)
 	if llog.Uuid != "" {
-		us.ctx.Services.PeerService.UuidBindUserId(llog.DeviceId, llog.Uuid, u.Id)
+		us.ctx.Services.UuidBindUserId(llog.DeviceId, llog.Uuid, u.Id)
 	}
 	return ut
 }
@@ -184,7 +184,7 @@ func (us *UserService) Logout(u *model.User, token string) error {
 		return err
 	}
 	if uuid != "" {
-		us.ctx.Services.PeerService.UuidUnbindUserId(uuid, u.Id)
+		us.ctx.Services.UuidUnbindUserId(uuid, u.Id)
 	}
 	return nil
 }
@@ -193,7 +193,7 @@ func (us *UserService) Logout(u *model.User, token string) error {
 func (us *UserService) Delete(u *model.User) error {
 	userCount := us.getAdminUserCount()
 	if userCount <= 1 && us.IsAdmin(u) {
-		return errors.New("The last admin user cannot be deleted")
+		return errors.New("the last admin user cannot be deleted")
 	}
 	tx := us.ctx.DB.Begin()
 	// 删除用户
@@ -223,7 +223,7 @@ func (us *UserService) Delete(u *model.User) error {
 	}
 	tx.Commit()
 	// 删除关联的peer
-	if err := us.ctx.Services.PeerService.EraseUserId(u.Id); err != nil {
+	if err := us.ctx.Services.EraseUserId(u.Id); err != nil {
 		us.ctx.Logger.Warn("User deleted successfully, but failed to unlink peer.")
 		return nil
 	}
@@ -238,7 +238,7 @@ func (us *UserService) Update(u *model.User) error {
 		adminCount := us.getAdminUserCount()
 		// 如果这是唯一的管理员，确保不能禁用或取消管理员权限
 		if adminCount <= 1 && (!us.IsAdmin(u) || u.Status == model.COMMON_STATUS_DISABLED) {
-			return errors.New("The last admin user cannot be disabled or demoted")
+			return errors.New("the last admin user cannot be disabled or demoted")
 		}
 	}
 	return us.ctx.DB.Model(u).Updates(u).Error
@@ -293,16 +293,16 @@ func (us *UserService) InfoByOauthId(op string, openId string) *model.User {
 }
 
 // RegisterByOauth 注册
-func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (error, *model.User) {
+func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (*model.User, error) {
 	us.ctx.Lock.Lock(lock.LockRegisterByOauth)
 	defer us.ctx.Lock.UnLock(lock.LockRegisterByOauth)
 	ut := us.ctx.Services.OauthService.UserThirdInfo(op, oauthUser.OpenId)
 	if ut.Id != 0 {
-		return nil, us.InfoById(ut.UserId)
+		return us.InfoById(ut.UserId), nil
 	}
-	err, oauthType := us.ctx.Services.OauthService.GetTypeByOp(op)
+	oauthType, err := us.ctx.Services.GetTypeByOp(op)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	//check if this email has been registered
 	email := oauthUser.Email
@@ -312,10 +312,10 @@ func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (e
 		// update email to oauthUser, in case it contain upper case
 		oauthUser.Email = email
 		// call this, if find user by email, it will update the email to local database
-		user, ldapErr := us.ctx.Services.LdapService.GetUserInfoByEmailLocal(email)
+		user, ldapErr := us.ctx.Services.GetUserInfoByEmailLocal(email)
 		// If we enable ldap, and the error is not ErrLdapUserNotFound, return the error because we could not sure if the user is not found in ldap
-		if !(errors.Is(ldapErr, ErrLdapNotEnabled) || errors.Is(ldapErr, ErrLdapUserNotFound) || ldapErr == nil) {
-			return ldapErr, user
+		if !errors.Is(ldapErr, ErrLdapNotEnabled) && !errors.Is(ldapErr, ErrLdapUserNotFound) && ldapErr != nil {
+			return user, ldapErr
 		}
 		if user.Id == 0 {
 			// this means the user is not found in ldap, maybe ldao is not enabled
@@ -324,7 +324,7 @@ func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (e
 		if user.Id != 0 {
 			ut.FromOauthUser(user.Id, oauthUser, oauthType, op)
 			us.ctx.DB.Create(ut)
-			return nil, user
+			return user, nil
 		}
 	}
 
@@ -342,12 +342,12 @@ func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (e
 	tx.Create(user)
 	if user.Id == 0 {
 		tx.Rollback()
-		return errors.New("OauthRegisterFailed"), user
+		return user, errors.New("OauthRegisterFailed")
 	}
 	ut.UserId = user.Id
 	tx.Create(ut)
 	tx.Commit()
-	return nil, user
+	return user, nil
 }
 
 // GenerateUsernameByOauth 生成用户名
@@ -495,5 +495,5 @@ func (us *UserService) IsUsernameExistsLocal(username string) bool {
 }
 
 func (us *UserService) IsEmailExistsLdap(email string) bool {
-	return us.ctx.Services.LdapService.IsEmailExists(email)
+	return us.ctx.Services.IsEmailExists(email)
 }

@@ -106,7 +106,7 @@ func (ls *LdapService) connectAndBind(cfg *config.Ldap, username, password strin
 	// Bind as the "service" user
 	if err = conn.Bind(username, password); err != nil {
 		fmt.Println("Bind failed")
-		conn.Close()
+		_ = conn.Close()
 		return nil, errors.Join(ErrLdapBindService, err)
 	}
 	return conn, nil
@@ -123,7 +123,7 @@ func (ls *LdapService) verifyCredentials(cfg *config.Ldap, username, password st
 	if err != nil {
 		return ErrLdapPasswordNotMatch
 	}
-	defer ldapConn.Close()
+	defer func() { _ = ldapConn.Close() }()
 	return nil
 }
 
@@ -337,7 +337,7 @@ func (ls *LdapService) searchResult(cfg *config.Ldap, searchRequest *ldap.Search
 	if err != nil {
 		return nil, err
 	}
-	defer ldapConn.Close()
+	defer func() { _ = ldapConn.Close() }()
 	return ldapConn.Search(searchRequest)
 }
 

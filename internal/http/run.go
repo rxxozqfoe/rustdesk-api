@@ -8,5 +8,7 @@ import (
 )
 
 func Run(g *gin.Engine, addr string) {
-	endless.ListenAndServe(addr, g)
+	if err := endless.ListenAndServe(addr, g); err != nil {
+		panic(err)
+	}
 }

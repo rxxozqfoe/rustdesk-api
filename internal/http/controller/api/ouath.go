@@ -37,13 +37,13 @@ func (o *Oauth) OidcAuth(c *gin.Context) {
 
 	oauthService := o.HD.Services.OauthService
 
-	err, state, verifier, nonce, url := oauthService.BeginAuth(f.Op)
+	state, verifier, nonce, url, err := oauthService.BeginAuth(f.Op)
 	if err != nil {
 		response.Error(c, response.TranslateMsg(c, err.Error()))
 		return
 	}
 
-	o.HD.Services.OauthService.SetOauthCache(state, &service.OauthCacheItem{
+	o.HD.Services.SetOauthCache(state, &service.OauthCacheItem{
 		Action:     service.OauthActionTypeLogin,
 		Id:         f.Id,
 		Op:         f.Op,
@@ -67,7 +67,7 @@ func (o *Oauth) OidcAuthQueryPre(c *gin.Context) (*model.User, *model.UserToken)
 		response.Error(c, response.TranslateMsg(c, "ParamsError")+": "+err.Error())
 		return nil, nil
 	}
-	result := o.HD.Services.OauthService.HandleOidcAuthQuery(q.Code, q.Id, q.Uuid, c.ClientIP())
+	result := o.HD.Services.HandleOidcAuthQuery(q.Code, q.Id, q.Uuid, c.ClientIP())
 	if result.AuthInPrg {
 		c.JSON(http.StatusOK, gin.H{"message": "Authorization in progress, please login and bind", "error": "No authed oidc is found"})
 		return nil, nil
@@ -110,7 +110,7 @@ func (o *Oauth) OidcAuthQuery(c *gin.Context) {
 // @Failure 500 {object} response.ErrorResponse
 // @Router /oidc/callback [get]
 func (o *Oauth) OauthCallback(c *gin.Context) {
-	result := o.HD.Services.OauthService.HandleCallback(c.Query("code"), c.Query("state"))
+	result := o.HD.Services.HandleCallback(c.Query("code"), c.Query("state"))
 	if result.RedirectURL != "" {
 		c.Redirect(http.StatusFound, result.RedirectURL)
 		return
