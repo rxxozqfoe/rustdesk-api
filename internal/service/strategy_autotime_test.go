@@ -30,7 +30,9 @@ func TestAutoTime_RoundTrip(t *testing.T) {
 }
 
 // Test the exact conversion used in heartbeat handler:
-//   serverModifiedAt := time.Time(strategy.UpdatedAt).Unix()
+//
+//	serverModifiedAt := time.Time(strategy.UpdatedAt).Unix()
+//
 // If UpdatedAt is zero, this returns a large negative number or epoch 0,
 // which will never match the client's modified_at, causing infinite re-sync.
 // Verifies that after an admin updates a strategy, the Unix-second timestamp

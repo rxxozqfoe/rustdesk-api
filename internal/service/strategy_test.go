@@ -813,9 +813,9 @@ func TestConfigOptionsMap(t *testing.T) {
 	ss := newStrategyService(db)
 
 	opts := map[string]string{
-		"enable-keyboard":      "N",
-		"approve-mode":         "click",
-		"whitelist":            "192.168.1.0,10.0.0.0",
+		"enable-keyboard":          "N",
+		"approve-mode":             "click",
+		"whitelist":                "192.168.1.0,10.0.0.0",
 		"custom-rendezvous-server": "my.server.com",
 	}
 	s := &model.Strategy{

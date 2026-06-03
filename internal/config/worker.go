@@ -6,7 +6,6 @@ type Worker struct {
 	LogCacheDir      string `mapstructure:"log-cache-dir"`
 }
 
-
 func (w *Worker) Enabled() bool {
 	return w.Token != ""
 }

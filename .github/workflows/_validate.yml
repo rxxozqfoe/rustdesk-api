@@ -1,0 +1,278 @@
+name: Validate (reusable)
+
+# Reusable validation pipeline called by ci.yml (on PR / main push) and
+# by publish.yml (on v*.*.* tag push). Keeps the validation rules in a
+# single place so the gate is identical whichever entry point triggers it.
+#
+# Adapted from the rustdesk-server (Rust) design to this Go service:
+#   - cargo fmt/clippy/check (-p hbbs) -> gofmt + go vet + golangci-lint
+#   - cargo-deny (RustSec advisories)  -> govulncheck (reachability-aware)
+#   - dependency-review (PR-only)      -> GitHub Advisory DB gate on go.mod
+
+on:
+  workflow_call:
+
+jobs:
+  # -------------------------------------------------------------------
+  # P2: Dockerfile lint (hadolint + digest-pin policy) plus Go static
+  # analysis (golangci-lint = govet + errcheck + ineffassign +
+  # staticcheck + unused + gosec). gosec catches risky patterns in OUR
+  # code (taint, hardcoded credentials, unsafe SQL string concat, weak
+  # crypto) that govulncheck does not look at -- govulncheck only flags
+  # KNOWN CVEs in dependencies.
+  # -------------------------------------------------------------------
+  lint:
+    name: Lint (hadolint + golangci-lint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        with:
+          dockerfile: Dockerfile
+          config: .hadolint.yaml
+          failure-threshold: warning
+
+      # hadolint has no built-in rule for digest pinning (see
+      # hadolint/hadolint#773, open since 2022). DL3006/DL3007 only
+      # enforce "has a tag" and "not :latest". This step fills that gap.
+      - name: Enforce FROM @sha256 digest pin
+        run: |
+          set -euo pipefail
+          unpinned=$(awk '/^FROM/ && $0 !~ /@sha256:[a-f0-9]{64}/ {print NR ": " $0}' Dockerfile || true)
+          if [ -n "$unpinned" ]; then
+            echo "::error::Unpinned FROM instruction(s) detected:"
+            echo "$unpinned"
+            exit 1
+          fi
+          echo "All FROM instructions are pinned to a digest."
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # gofmt is not part of golangci-lint's default set; run it as an
+      # explicit gate (equivalent to `cargo fmt -- --check`). Fails if
+      # any tracked Go file is not gofmt-clean.
+      - name: gofmt check
+        run: |
+          set -euo pipefail
+          unformatted=$(gofmt -l $(git ls-files '*.go'))
+          if [ -n "$unformatted" ]; then
+            echo "::error::The following files are not gofmt-clean:"
+            echo "$unformatted"
+            echo "Run: gofmt -w <file>"
+            exit 1
+          fi
+          echo "All Go files are gofmt-clean."
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
+        with:
+          version: v2.12.2
+
+  # -------------------------------------------------------------------
+  # Go vet + unit tests with the race detector and a coverage profile.
+  # `go vet` is the Go equivalent of the type/lint pass; `go test` is
+  # the analogue of `cargo test`.
+  # -------------------------------------------------------------------
+  test:
+    name: Test (vet + go test)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: coverage
+          path: coverage.out
+          if-no-files-found: warn
+          retention-days: 7
+
+  # -------------------------------------------------------------------
+  # govulncheck: Go's official reachability-aware vulnerability scanner.
+  # Unlike Trivy (which reports every CVE in a Go binary's transitive
+  # dependency set), govulncheck only flags CVEs whose vulnerable symbols
+  # are actually reachable from our code. For stdlib CVEs it dramatically
+  # cuts noise. Fails on any reported vulnerability; fixes arrive via
+  # go.mod bumps or a Go-version upgrade (handled by Renovate).
+  #
+  # This also runs as a standalone, path-filtered + scheduled workflow
+  # (.github/workflows/govulncheck.yml) so newly published advisories
+  # against unchanged dependencies are caught on a daily cron. Keeping a
+  # copy inside the reusable gate means every PR / release is also
+  # checked against the advisory DB as it stands at that moment.
+  #
+  # Uses the official golang/govulncheck-action rather than
+  # `go install ... @latest` so the tool version is itself pinned to a
+  # SHA (kept up to date by Renovate with every other pinned action).
+  # -------------------------------------------------------------------
+  govulncheck:
+    name: Govulncheck (Go vulnerability reachability)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+        with:
+          go-version-file: go.mod
+          # The action's default `repo-checkout: true` runs git inside the
+          # action itself. Since actions/checkout@v6 persists credentials to
+          # a separate includeIf'd file, that inner git call can pick up a
+          # bad auth header and GitHub returns HTTP 400. We already checked
+          # out above, so skip the action's redundant second checkout.
+          repo-checkout: false
+
+  # -------------------------------------------------------------------
+  # P3: Verify cosign/sigstore signatures of pinned base images against
+  # .github/cosign-image-policy.json. Dockerfile-agnostic.
+  # -------------------------------------------------------------------
+  verify-base-images:
+    name: Verify base image signatures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Verify all FROM base images against policy
+        run: bash .github/scripts/verify-base-images.sh Dockerfile
+
+  # -------------------------------------------------------------------
+  # P4: Trivy CVE scan. Builds an amd64 image into the local daemon
+  # (no registry push), scans, and uploads SARIF to GitHub code scanning.
+  # -------------------------------------------------------------------
+  scan:
+    name: Trivy CVE scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build local image for scanning
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: local/scan-target:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Two Trivy passes by design:
+      #
+      #  1. "block" pass — severity=CRITICAL,HIGH, exit-code=1, table
+      #     format. Fails the job if any blocking-severity finding shows
+      #     up. No SARIF here so the failure exits cleanly without
+      #     having to disentangle exit-code vs severity semantics
+      #     (aquasecurity/trivy-action#309).
+      #
+      #  2. "report" pass — every severity, exit-code=0, SARIF format.
+      #     Runs unconditionally (if: always()) so even when the block
+      #     pass fails, the Security tab still gets the full picture
+      #     (UNKNOWN/LOW/MEDIUM also visible, not just CRITICAL/HIGH).
+      #
+      # govulncheck provides the tighter, Go-aware reachability filter;
+      # Trivy covers OS packages and non-Go libraries in the final
+      # runtime image that govulncheck cannot see.
+      - name: Trivy scan — block on CRITICAL/HIGH
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: local/scan-target:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      - name: Trivy scan — full SARIF report (all severities)
+        if: always()
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: local/scan-target:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          # No severity filter and exit-code=0: this pass exists purely
+          # to populate the GitHub Security tab. The block pass above is
+          # the one that gates the job.
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      - name: Upload Trivy SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+  # -------------------------------------------------------------------
+  # dependency-review: PR-only. Blocks PRs that introduce dependencies
+  # with known vulnerabilities at HIGH severity or above. Renovate
+  # guards the maintenance path, but human-authored PRs (especially
+  # from forks) can still introduce a vulnerable direct or transitive
+  # dependency via go.mod / go.sum. This is GitHub's first-party check
+  # against the Advisory Database -- a different data source from OSV /
+  # govulncheck, so it catches things the OSV path can miss.
+  # -------------------------------------------------------------------
+  dependency-review:
+    name: Dependency review (PR only)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write   # post diff summary comment when something fails
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

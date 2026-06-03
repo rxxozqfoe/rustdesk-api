@@ -28,4 +28,3 @@ type UserList struct {
 	Users []*User `json:"list,omitempty"`
 	Pagination
 }
-
