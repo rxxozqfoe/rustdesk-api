@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 RustDesk API server implemented in Go — provides the backend for RustDesk remote desktop clients, a web admin panel, and a web client. Supports user management, address books, device groups, OAuth/OIDC/LDAP authentication, and audit logging.
-The main branch is "master".
+The main branch is "main".
 
 ## Build & Development Commands
 
