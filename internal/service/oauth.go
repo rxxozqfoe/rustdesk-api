@@ -612,10 +612,11 @@ func (os *OauthService) HandleCallback(code, state string) *OauthCallbackResult 
 		if user == nil {
 			oauthConfig := os.InfoByOp(op)
 			if !*oauthConfig.AutoRegister {
-				oauthCache.UpdateFromOauthUser(oauthUser)
-				return &OauthCallbackResult{
-					RedirectURL: "/_admin/#/oauth/bind/" + cacheKey,
-				}
+				// Auto-register is off and this OAuth identity is not linked to
+				// any user. The bind page lived in the old web admin, which is
+				// removed here; until the front-end ships an inline bind flow,
+				// fail clearly instead of leaving the poller to time out.
+				return failResult("OauthFailed", "OAuth identity is not linked to a user")
 			}
 			err, user = os.ctx.Services.UserService.RegisterByOauth(oauthUser, op)
 			if err != nil {
@@ -624,9 +625,9 @@ func (os *OauthService) HandleCallback(code, state string) *OauthCallbackResult 
 		}
 		oauthCache.UserId = user.Id
 		os.SetOauthCache(cacheKey, oauthCache, 0)
-		if oauthCache.DeviceType == model.LoginLogClientWebAdmin {
-			return &OauthCallbackResult{RedirectURL: "/_admin/#/"}
-		}
+		// Login completes via the poll endpoint (which reads UserId from the
+		// cache set above), so the callback window just renders a self-closing
+		// success page for every client type instead of redirecting to a UI.
 		return successResult("OauthSuccess")
 	}
 
