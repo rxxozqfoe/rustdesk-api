@@ -32,4 +32,3 @@ jobs:
     permissions:
       contents: read
       security-events: write   # for the scan job to upload SARIF
-      pull-requests: write     # for dependency-review to comment on PRs

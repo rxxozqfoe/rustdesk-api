@@ -1,8 +1,7 @@
 name: govulncheck
 
 # Supply-chain check via govulncheck, Go's official reachability-aware
-# vulnerability scanner. This is the Go analogue of rustdesk-server's
-# cargo-deny workflow:
+# vulnerability scanner:
 #   - govulncheck queries the Go vulnerability database (vuln.go.dev, an
 #     OSV mirror) and reports only CVEs whose vulnerable symbols are
 #     actually reachable from this module's code — far less noise than a
