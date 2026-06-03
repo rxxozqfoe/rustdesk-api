@@ -2,7 +2,6 @@
 runtime/*
 !runtime
 !runtime/cache/.gitkeep
-resources/admin
 release
 data/*
 !data/.gitkeep
