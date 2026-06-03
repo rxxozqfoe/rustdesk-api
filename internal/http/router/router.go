@@ -13,10 +13,5 @@ func WebInit(g *gin.Engine, hd *deps.HandlerDeps) {
 	i := &web.Index{HD: hd}
 	g.GET("/", i.Index)
 
-	if hd.Config.App.WebClient == 1 {
-		g.GET("/webclient-config/index.js", i.ConfigJs)
-		g.StaticFS("/webclient", http.Dir(hd.Config.Gin.ResourcesPath+"/web"))
-		g.StaticFS("/webclient2", http.Dir(hd.Config.Gin.ResourcesPath+"/web2"))
-	}
 	g.StaticFS("/_admin", http.Dir(hd.Config.Gin.ResourcesPath+"/admin"))
 }
