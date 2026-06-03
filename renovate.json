@@ -1,0 +1,73 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  "$comment": "Mend-curated config:best-practices baseline pulls in docker:pinDigests, helpers:pinGitHubActionDigests, :pinDevDependencies and abandonments:recommended. The three explicit presets below add the Dependency Dashboard issue, semantic-commit PR titles, and override the action-digest pin comment to a precise semver (# v4.2.3) instead of a floating tag.",
+
+  "extends": [
+    "config:best-practices",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+
+  "timezone": "Asia/Taipei",
+
+  "schedule": ["before 9am on monday"],
+
+  "labels": ["dependencies"],
+
+  "automerge": false,
+
+  "prHourlyLimit": 10,
+
+  "prConcurrentLimit": 10,
+
+  "pinDigests": true,
+
+  "postUpdateOptions": ["gomodTidy"],
+
+  "minimumReleaseAge": "15 days",
+
+  "internalChecksFilter": "flexible",
+
+  "osvVulnerabilityAlerts": true,
+
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "schedule": [],
+    "minimumReleaseAge": null,
+    "dependencyDashboardApproval": false
+  },
+
+  "packageRules": [
+    {
+      "description": "Group GORM driver packages (released together).",
+      "matchPackageNames": ["gorm.io/**"],
+      "groupName": "gorm"
+    },
+    {
+      "description": "Group container base images (Go builder + distroless runtime).",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "golang",
+        "docker.io/library/golang",
+        "gcr.io/distroless/static-debian12"
+      ],
+      "groupName": "container base images"
+    },
+    {
+      "description": "Major bumps go through Dependency Dashboard approval.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "labels": ["dependencies", "major-update"]
+    },
+    {
+      "description": "Go minor bumps (1.X -> 1.Y) require Dashboard approval.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["golang", "docker.io/library/golang"],
+      "matchUpdateTypes": ["minor"],
+      "dependencyDashboardApproval": true,
+      "labels": ["dependencies", "golang-minor-update"]
+    }
+  ]
+}

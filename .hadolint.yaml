@@ -1,0 +1,45 @@
+# Hadolint rules: https://github.com/hadolint/hadolint/wiki
+#
+# Policy:
+#  - Every FROM must be pinned to a digest (not just a tag).
+#  - No :latest.
+#  - This is a multi-stage build: a golang:alpine builder (apk, CGO via
+#    build-base/musl-dev for the static go-sqlite3 link) producing a
+#    static binary, copied into a gcr.io/distroless/static-debian12
+#    runtime that runs as the nonroot user.
+#
+# NOTE: hadolint has no built-in rule requiring `@sha256:` digest
+# pinning. DL3006/DL3007 only enforce "has a tag" and "not :latest".
+# The digest requirement is enforced by a separate awk step in
+# .github/workflows/_validate.yml ("Enforce FROM @sha256 digest pin").
+# When hadolint adds native support (upstream issue hadolint/hadolint#773)
+# that step can be removed in favour of the native rule.
+
+failure-threshold: warning
+
+# Treat these as errors rather than info/warnings.
+override:
+  error:
+    - DL3007  # Using latest
+    - DL3022  # COPY --from should reference previously defined FROM alias
+    - DL3023  # COPY --from cannot reference its own FROM
+    - DL3024  # FROM aliases must be unique
+    - DL3026  # Use only official/trusted FROM images
+
+# Ignore rules that don't fit this build.
+ignored:
+  # DL3018: pin apk package versions. Intentionally not enforced:
+  #  - the base images are already digest-pinned (reproducible base),
+  #  - Alpine apk point-versions churn on every security update, so a
+  #    pinned version makes `apk add` fail the moment Alpine publishes
+  #    a patched package — the opposite of what we want for timely
+  #    OS-level CVE fixes (Trivy + Renovate digest bumps handle
+  #    base-image freshness instead). Only build-stage packages
+  #    (build-base, musl-dev) are installed; they never ship in the
+  #    distroless runtime image.
+  - DL3018
+
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - ghcr.io
