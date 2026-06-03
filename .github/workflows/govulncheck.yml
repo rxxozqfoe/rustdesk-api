@@ -1,0 +1,69 @@
+name: govulncheck
+
+# Supply-chain check via govulncheck, Go's official reachability-aware
+# vulnerability scanner. This is the Go analogue of rustdesk-server's
+# cargo-deny workflow:
+#   - govulncheck queries the Go vulnerability database (vuln.go.dev, an
+#     OSV mirror) and reports only CVEs whose vulnerable symbols are
+#     actually reachable from this module's code — far less noise than a
+#     blanket "every CVE in the dependency tree" scan.
+#
+# HARD, BLOCKING gate: govulncheck exits non-zero on any reachable
+# vulnerability and that fails the workflow by design. Do NOT add
+# continue-on-error.
+#
+# Unlike the lint / test / scan jobs in _validate.yml (run on every
+# PR / release), the advisory result only changes when either:
+#   1. the dependency set changes  -> go.mod / go.sum edits
+#   2. a new advisory is published against an unchanged dependency
+#      -> covered by the daily schedule
+# so this runs on those triggers only, not on every push.
+#
+# A copy of this check also runs inside _validate.yml, so each PR /
+# release is gated against the advisory DB as it stands at that moment;
+# this standalone workflow adds the time-based (cron) coverage.
+
+on:
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/govulncheck.yml"
+  push:
+    branches: [main]
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/govulncheck.yml"
+  schedule:
+    # Daily at 03:00 UTC — catches advisories newly published against
+    # dependencies that have not otherwise changed.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: govulncheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  govulncheck:
+    name: govulncheck (reachable vulnerabilities)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+        with:
+          go-version-file: go.mod
+          # We already checked out above; skip the action's redundant
+          # second checkout (which can hit an HTTP 400 with the
+          # credentials actions/checkout@v6 persists). See _validate.yml.
+          repo-checkout: false

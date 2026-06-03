@@ -1,0 +1,16 @@
+# Code owners for this repository.
+# See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# The CI/CD pipeline, its supporting policy files, and the container
+# build definition are security-sensitive: a change here can alter what
+# gets built, signed, and published, or how dependencies are updated.
+# Require the repo owner's review on any change to them.
+
+/.github/workflows/             @rxxozqfoe
+/.github/scripts/               @rxxozqfoe
+/.github/cosign-image-policy.json @rxxozqfoe
+/.github/CODEOWNERS             @rxxozqfoe
+/renovate.json                  @rxxozqfoe
+/.hadolint.yaml                 @rxxozqfoe
+/.golangci.yml                  @rxxozqfoe
+/Dockerfile                     @rxxozqfoe
