@@ -29,7 +29,7 @@ func redisTestOptions(tb testing.TB) *redis.Options {
 	}
 
 	c := redis.NewClient(opt)
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	if err := c.Ping(ctx).Err(); err != nil {
