@@ -271,6 +271,13 @@ func TestRecord_PartThenRemove(t *testing.T) {
 	engine := testutil.NewEngine(t)
 	engine.POST("/api/record", r.Upload)
 
+	// "new" first: only this op creates the records directory (the "part" op
+	// opens with O_CREATE but never MkdirAll), mirroring the real client flow.
+	recNew := httptest.NewRecorder()
+	reqNew := testutil.JSONRequest(t, http.MethodPost, "/api/record?type=new&file=seg.bin", "")
+	engine.ServeHTTP(recNew, reqNew)
+	require.Equal(t, http.StatusOK, recNew.Code)
+
 	// Write a part at offset 0.
 	rec := httptest.NewRecorder()
 	req := testutil.JSONRequest(t, http.MethodPost, "/api/record?type=part&file=seg.bin&offset=0", "hello")

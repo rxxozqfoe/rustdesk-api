@@ -102,7 +102,7 @@ func doJSON(t testing.TB, engine *gin.Engine, method, target, body string) (*htt
 func seedTokenUser(t testing.TB, kit *servicekit.Kit, mutators ...func(*model.User)) (*model.User, string) {
 	t.Helper()
 	u := testutil.CreateUser(t, kit.DB, mutators...)
-	token := kit.Services.UserService.GenerateToken(u)
+	token := kit.Services.GenerateToken(u)
 	ut := &model.UserToken{
 		UserId:    u.Id,
 		Token:     token,

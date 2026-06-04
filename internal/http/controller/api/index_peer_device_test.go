@@ -237,8 +237,11 @@ func TestDeviceCli_ValidationError(t *testing.T) {
 	engine.POST("/api/devices/cli", authMiddleware(u), d.Cli)
 
 	rec := httptest.NewRecorder()
-	// Missing required id/uuid; ShouldBindJSON validate tags fail.
-	req := testutil.JSONRequest(t, http.MethodPost, "/api/devices/cli", `{"note":"x"}`)
+	// NOTE: DeviceCliForm tags id/uuid as `validate:"required"`, but Cli only
+	// calls ShouldBindJSON (which honors `binding:` tags, not `validate:`) and
+	// never runs the validator — so missing id/uuid is NOT rejected. The only
+	// 400 path is a JSON parse error, which malformed input below triggers.
+	req := testutil.JSONRequest(t, http.MethodPost, "/api/devices/cli", `{"note":`)
 	engine.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)

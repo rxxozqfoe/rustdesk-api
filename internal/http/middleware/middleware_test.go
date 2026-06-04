@@ -40,7 +40,7 @@ func wireResponse(t testing.TB) {
 func seedTokenUser(t testing.TB, kit *servicekit.Kit, mutators ...func(*model.User)) (*model.User, string) {
 	t.Helper()
 	u := testutil.CreateUser(t, kit.DB, mutators...)
-	token := kit.Services.UserService.GenerateToken(u)
+	token := kit.Services.GenerateToken(u)
 	ut := &model.UserToken{
 		UserId:    u.Id,
 		Token:     token,
@@ -56,7 +56,7 @@ func seedTokenUser(t testing.TB, kit *servicekit.Kit, mutators ...func(*model.Us
 func seedExpiredToken(t testing.TB, kit *servicekit.Kit) (*model.User, string) {
 	t.Helper()
 	u := testutil.CreateUser(t, kit.DB)
-	token := kit.Services.UserService.GenerateToken(u)
+	token := kit.Services.GenerateToken(u)
 	ut := &model.UserToken{
 		UserId:    u.Id,
 		Token:     token,

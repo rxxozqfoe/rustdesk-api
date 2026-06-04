@@ -92,7 +92,7 @@ func TestRustAuth_UnknownButValidJWTAborts(t *testing.T) {
 	kit := servicekit.New(t)
 	// Mint a structurally valid JWT for a user that has no UserToken row, so
 	// VerifyJWT passes but InfoByAccessToken returns id 0.
-	token := kit.Services.UserService.GenerateToken(&model.User{IdModel: model.IdModel{Id: 999}})
+	token := kit.Services.GenerateToken(&model.User{IdModel: model.IdModel{Id: 999}})
 	engine := rustAuthEngine(t, kit)
 
 	rec := httptest.NewRecorder()

@@ -55,7 +55,7 @@ func TestOidcAuth_WebauthProviderReturnsURL(t *testing.T) {
 	assert.Contains(t, res.URL, "/_admin/#/oauth/")
 
 	// A cache item should have been stored under the returned state code.
-	item := kit.Services.OauthService.GetOauthCache(res.Code)
+	item := kit.Services.GetOauthCache(res.Code)
 	require.NotNil(t, item)
 	assert.Equal(t, service.OauthActionTypeLogin, item.Action)
 }
@@ -85,7 +85,7 @@ func TestOidcAuthQuery_AuthInProgress(t *testing.T) {
 
 	// Seed a cache item with no UserId yet => AuthInPrg branch.
 	code := "pending-code"
-	kit.Services.OauthService.SetOauthCache(code, &service.OauthCacheItem{
+	kit.Services.SetOauthCache(code, &service.OauthCacheItem{
 		Action: service.OauthActionTypeLogin,
 	}, 0)
 
@@ -108,7 +108,7 @@ func TestOidcAuthQuery_Success(t *testing.T) {
 
 	// Seed a cache item already bound to the user => login completes.
 	code := "ready-code"
-	kit.Services.OauthService.SetOauthCache(code, &service.OauthCacheItem{
+	kit.Services.SetOauthCache(code, &service.OauthCacheItem{
 		Action: service.OauthActionTypeLogin,
 		UserId: u.Id,
 	}, 0)
