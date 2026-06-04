@@ -123,7 +123,7 @@ func (ct *Tag) Update(c *gin.Context) {
 	}
 
 	t := f.ToTag()
-	if t.CollectionId > 0 && !ct.HD.Services.AddressBookService.CheckCollectionOwner(t.UserId, t.CollectionId) {
+	if t.CollectionId > 0 && !ct.HD.Services.CheckCollectionOwner(t.UserId, t.CollectionId) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
@@ -174,5 +174,4 @@ func (ct *Tag) Delete(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, err.Error())
-	return
 }

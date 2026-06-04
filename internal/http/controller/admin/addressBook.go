@@ -37,7 +37,6 @@ func (ct *AddressBook) Detail(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // Create 创建地址簿
@@ -67,12 +66,12 @@ func (ct *AddressBook) Create(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
-	if t.CollectionId > 0 && !ct.HD.Services.AddressBookService.CheckCollectionOwner(t.UserId, t.CollectionId) {
+	if t.CollectionId > 0 && !ct.HD.Services.CheckCollectionOwner(t.UserId, t.CollectionId) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
 
-	ex := ct.HD.Services.AddressBookService.InfoByUserIdAndIdAndCid(t.UserId, t.Id, t.CollectionId)
+	ex := ct.HD.Services.InfoByUserIdAndIdAndCid(t.UserId, t.Id, t.CollectionId)
 	if ex.RowId > 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemExists"))
 		return
@@ -141,9 +140,12 @@ func (ct *AddressBook) BatchCreate(c *gin.Context) {
 		if t.UserId == 0 {
 			continue
 		}
-		ex := ct.HD.Services.AddressBookService.InfoByUserIdAndIdAndCid(t.UserId, t.Id, t.CollectionId)
+		ex := ct.HD.Services.InfoByUserIdAndIdAndCid(t.UserId, t.Id, t.CollectionId)
 		if ex.RowId == 0 {
-			ct.HD.Services.AddressBookService.Create(t)
+			if err := ct.HD.Services.AddressBookService.Create(t); err != nil {
+				response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
+				return
+			}
 		}
 	}
 
@@ -191,10 +193,6 @@ func (ct *AddressBook) List(c *gin.Context) {
 		}
 	})
 
-	abCIds := make([]uint, 0)
-	for _, ab := range res.AddressBooks {
-		abCIds = append(abCIds, ab.CollectionId)
-	}
 	response.Success(c, res)
 }
 
@@ -230,11 +228,11 @@ func (ct *AddressBook) Update(c *gin.Context) {
 		return
 	}
 	t := f.ToAddressBook()
-	if t.CollectionId > 0 && !ct.HD.Services.AddressBookService.CheckCollectionOwner(t.UserId, t.CollectionId) {
+	if t.CollectionId > 0 && !ct.HD.Services.CheckCollectionOwner(t.UserId, t.CollectionId) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
-	err := ct.HD.Services.AddressBookService.UpdateAll(t)
+	err := ct.HD.Services.UpdateAll(t)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -302,14 +300,14 @@ func (ct *AddressBook) ShareByWebClient(c *gin.Context) {
 	}
 
 	u := helper.CurUser(c)
-	ab := ct.HD.Services.AddressBookService.InfoByUserIdAndId(u.Id, f.Id)
+	ab := ct.HD.Services.InfoByUserIdAndId(u.Id, f.Id)
 	if ab.RowId == 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
 	m := f.ToShareRecord()
 	m.UserId = u.Id
-	err := ct.HD.Services.AddressBookService.ShareByWebClient(m)
+	err := ct.HD.Services.ShareByWebClient(m)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -332,7 +330,7 @@ func (ct *AddressBook) BatchCreateFromPeers(c *gin.Context) {
 	}
 
 	if f.CollectionId != 0 {
-		collection := ct.HD.Services.AddressBookService.CollectionInfoById(f.CollectionId)
+		collection := ct.HD.Services.CollectionInfoById(f.CollectionId)
 		if collection.Id == 0 {
 			response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 			return
@@ -350,15 +348,18 @@ func (ct *AddressBook) BatchCreateFromPeers(c *gin.Context) {
 
 	tags, _ := json.Marshal(f.Tags)
 	for _, peer := range peers.Peers {
-		ab := ct.HD.Services.AddressBookService.FromPeer(peer)
+		ab := ct.HD.Services.FromPeer(peer)
 		ab.Tags = tags
 		ab.CollectionId = f.CollectionId
 		ab.UserId = f.UserId
-		ex := ct.HD.Services.AddressBookService.InfoByUserIdAndIdAndCid(f.UserId, ab.Id, ab.CollectionId)
+		ex := ct.HD.Services.InfoByUserIdAndIdAndCid(f.UserId, ab.Id, ab.CollectionId)
 		if ex.RowId != 0 {
 			continue
 		}
-		ct.HD.Services.AddressBookService.Create(ab)
+		if err := ct.HD.Services.AddressBookService.Create(ab); err != nil {
+			response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
+			return
+		}
 	}
 	response.Success(c, nil)
 }

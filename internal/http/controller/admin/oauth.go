@@ -7,7 +7,6 @@ import (
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/helper"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/request/admin"
-	adminReq "github.com/lejianwen/rustdesk-api/v2/internal/http/request/admin"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
 	"github.com/lejianwen/rustdesk-api/v2/internal/service"
 )
@@ -23,7 +22,7 @@ func (o *Oauth) Info(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
-	v := o.HD.Services.OauthService.GetOauthCache(code)
+	v := o.HD.Services.GetOauthCache(code)
 	if v == nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -32,7 +31,7 @@ func (o *Oauth) Info(c *gin.Context) {
 }
 
 func (o *Oauth) ToBind(c *gin.Context) {
-	f := &adminReq.BindOauthForm{}
+	f := &admin.BindOauthForm{}
 	err := c.ShouldBindJSON(f)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
@@ -46,13 +45,13 @@ func (o *Oauth) ToBind(c *gin.Context) {
 		return
 	}
 
-	err, state, verifier, nonce, url := o.HD.Services.OauthService.BeginAuth(f.Op)
+	state, verifier, nonce, url, err := o.HD.Services.BeginAuth(f.Op)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, err.Error()))
 		return
 	}
 
-	o.HD.Services.OauthService.SetOauthCache(state, &service.OauthCacheItem{
+	o.HD.Services.SetOauthCache(state, &service.OauthCacheItem{
 		Action:   service.OauthActionTypeBind,
 		Op:       f.Op,
 		UserId:   u.Id,
@@ -68,7 +67,7 @@ func (o *Oauth) ToBind(c *gin.Context) {
 
 // Confirm 确认授权登录
 func (o *Oauth) Confirm(c *gin.Context) {
-	j := &adminReq.OauthConfirmForm{}
+	j := &admin.OauthConfirmForm{}
 	err := c.ShouldBindJSON(j)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
@@ -78,19 +77,19 @@ func (o *Oauth) Confirm(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
-	v := o.HD.Services.OauthService.GetOauthCache(j.Code)
+	v := o.HD.Services.GetOauthCache(j.Code)
 	if v == nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OauthExpired"))
 		return
 	}
 	u := helper.CurUser(c)
 	v.UserId = u.Id
-	o.HD.Services.OauthService.SetOauthCache(j.Code, v, 0)
+	o.HD.Services.SetOauthCache(j.Code, v, 0)
 	response.Success(c, v)
 }
 
 func (o *Oauth) BindConfirm(c *gin.Context) {
-	j := &adminReq.OauthConfirmForm{}
+	j := &admin.OauthConfirmForm{}
 	err := c.ShouldBindJSON(j)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
@@ -120,7 +119,7 @@ func (o *Oauth) BindConfirm(c *gin.Context) {
 }
 
 func (o *Oauth) Unbind(c *gin.Context) {
-	f := &adminReq.UnBindOauthForm{}
+	f := &admin.UnBindOauthForm{}
 	err := c.ShouldBindJSON(f)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
@@ -132,7 +131,7 @@ func (o *Oauth) Unbind(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
-	err = o.HD.Services.OauthService.UnBindOauthUser(u.Id, f.Op)
+	err = o.HD.Services.UnBindOauthUser(u.Id, f.Op)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -160,7 +159,6 @@ func (o *Oauth) Detail(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // Create 创建Oauth
@@ -186,11 +184,11 @@ func (o *Oauth) Create(c *gin.Context) {
 		return
 	}
 	u := f.ToOauth()
-	if err := o.HD.Services.OauthService.FormatOauthInfo(u); err != nil {
+	if err := o.HD.Services.FormatOauthInfo(u); err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
 		return
 	}
-	ex := o.HD.Services.OauthService.InfoByOp(u.Op)
+	ex := o.HD.Services.InfoByOp(u.Op)
 	if ex.Id > 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemExists"))
 		return

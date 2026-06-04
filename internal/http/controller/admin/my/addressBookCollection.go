@@ -38,7 +38,7 @@ func (abc *AddressBookCollection) Create(c *gin.Context) {
 	}
 	u := helper.CurUser(c)
 	f.UserId = u.Id
-	err := abc.HD.Services.AddressBookService.CreateCollection(f)
+	err := abc.HD.Services.CreateCollection(f)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -66,7 +66,7 @@ func (abc *AddressBookCollection) List(c *gin.Context) {
 	}
 	u := helper.CurUser(c)
 	query.UserId = int(u.Id)
-	res := abc.HD.Services.AddressBookService.ListCollection(query.Page, query.PageSize, func(tx *gorm.DB) {
+	res := abc.HD.Services.ListCollection(query.Page, query.PageSize, func(tx *gorm.DB) {
 		tx.Where("user_id = ?", query.UserId)
 	})
 	response.Success(c, res)
@@ -103,7 +103,7 @@ func (abc *AddressBookCollection) Update(c *gin.Context) {
 	//	response.Fail(c, 101, response.TranslateMsg(c, "NoAccess"))
 	//	return
 	//}
-	ex := abc.HD.Services.AddressBookService.CollectionInfoById(f.Id)
+	ex := abc.HD.Services.CollectionInfoById(f.Id)
 	if ex.Id == 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -113,7 +113,7 @@ func (abc *AddressBookCollection) Update(c *gin.Context) {
 		return
 	}
 
-	err := abc.HD.Services.AddressBookService.UpdateCollection(f)
+	err := abc.HD.Services.UpdateCollection(f)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -144,7 +144,7 @@ func (abc *AddressBookCollection) Delete(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	ex := abc.HD.Services.AddressBookService.CollectionInfoById(f.Id)
+	ex := abc.HD.Services.CollectionInfoById(f.Id)
 	if ex.Id == 0 {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
@@ -154,7 +154,7 @@ func (abc *AddressBookCollection) Delete(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "NoAccess"))
 		return
 	}
-	err := abc.HD.Services.AddressBookService.DeleteCollection(ex)
+	err := abc.HD.Services.DeleteCollection(ex)
 	if err == nil {
 		response.Success(c, nil)
 		return

@@ -44,10 +44,14 @@ func (s *BuildArtifactService) Create(ba *model.BuildArtifact) error {
 
 func (s *BuildArtifactService) Delete(ba *model.BuildArtifact) error {
 	if ba.DirPath != "" {
-		os.RemoveAll(ba.DirPath)
+		if err := os.RemoveAll(ba.DirPath); err != nil {
+			s.ctx.Logger.Warnf("remove build artifact dir fail: %s %v", ba.DirPath, err)
+		}
 	}
 	if ba.S3Key != "" && s.ctx.S3 != nil {
-		s.ctx.S3.Delete(context.Background(), ba.S3Key)
+		if err := s.ctx.S3.Delete(context.Background(), ba.S3Key); err != nil {
+			s.ctx.Logger.Warnf("delete build artifact from S3 fail: %s %v", ba.S3Key, err)
+		}
 	}
 	return s.ctx.DB.Delete(ba).Error
 }
@@ -62,7 +66,9 @@ func (s *BuildArtifactService) RegisterBuildFolder(platform, arch, version, dirP
 	existing := s.FindByPlatformArchVersion(platform, arch, version)
 	if existing.Id > 0 {
 		if existing.DirPath != dirPath && existing.DirPath != "" {
-			os.RemoveAll(existing.DirPath)
+			if err := os.RemoveAll(existing.DirPath); err != nil {
+				s.ctx.Logger.Warnf("remove stale build artifact dir fail: %s %v", existing.DirPath, err)
+			}
 		}
 		existing.DirPath = dirPath
 		existing.Source = source

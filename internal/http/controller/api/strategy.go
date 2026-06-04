@@ -23,7 +23,7 @@ type StrategyController struct {
 // @Router /strategies [get]
 // @Security BearerAuth
 func (sc *StrategyController) List(c *gin.Context) {
-	strategies := sc.HD.Services.StrategyService.ListAll()
+	strategies := sc.HD.Services.ListAll()
 	c.JSON(http.StatusOK, strategies)
 }
 
@@ -40,7 +40,7 @@ func (sc *StrategyController) List(c *gin.Context) {
 // @Security BearerAuth
 func (sc *StrategyController) Detail(c *gin.Context) {
 	guid := c.Param("guid")
-	s := sc.HD.Services.StrategyService.InfoByGuid(guid)
+	s := sc.HD.Services.InfoByGuid(guid)
 	if s.Id > 0 {
 		c.JSON(http.StatusOK, s)
 		return
@@ -62,7 +62,7 @@ func (sc *StrategyController) Detail(c *gin.Context) {
 // @Security BearerAuth
 func (sc *StrategyController) UpdateStatus(c *gin.Context) {
 	guid := c.Param("guid")
-	s := sc.HD.Services.StrategyService.InfoByGuid(guid)
+	s := sc.HD.Services.InfoByGuid(guid)
 	if s.Id == 0 {
 		response.Error(c, "Strategy not found")
 		return
@@ -74,7 +74,7 @@ func (sc *StrategyController) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	if err := sc.HD.Services.StrategyService.SetEnabled(s.Id, enabled); err != nil {
+	if err := sc.HD.Services.SetEnabled(s.Id, enabled); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -101,7 +101,7 @@ func (sc *StrategyController) Assign(c *gin.Context) {
 
 	var strategyId uint
 	if f.Strategy != "" {
-		s := sc.HD.Services.StrategyService.InfoByGuid(f.Strategy)
+		s := sc.HD.Services.InfoByGuid(f.Strategy)
 		if s.Id == 0 {
 			response.Error(c, "Strategy not found")
 			return
@@ -111,32 +111,44 @@ func (sc *StrategyController) Assign(c *gin.Context) {
 
 	// Assign/unassign peers
 	for _, peerId := range f.Peers {
-		peer := sc.HD.Services.PeerService.FindById(peerId)
+		peer := sc.HD.Services.FindById(peerId)
 		if peer == nil || peer.RowId == 0 {
 			continue
 		}
 		if strategyId > 0 {
-			sc.HD.Services.StrategyService.AssignToPeer(strategyId, peer.RowId)
+			if err := sc.HD.Services.AssignToPeer(strategyId, peer.RowId); err != nil {
+				sc.HD.Logger.Warnf("AssignToPeer fail: strategy=%d peer=%d %v", strategyId, peer.RowId, err)
+			}
 		} else {
-			sc.HD.Services.StrategyService.UnassignPeer(peer.RowId)
+			if err := sc.HD.Services.UnassignPeer(peer.RowId); err != nil {
+				sc.HD.Logger.Warnf("UnassignPeer fail: peer=%d %v", peer.RowId, err)
+			}
 		}
 	}
 
 	// Assign/unassign users
 	for _, userId := range f.Users {
 		if strategyId > 0 {
-			sc.HD.Services.StrategyService.AssignToUser(strategyId, userId)
+			if err := sc.HD.Services.AssignToUser(strategyId, userId); err != nil {
+				sc.HD.Logger.Warnf("AssignToUser fail: strategy=%d user=%d %v", strategyId, userId, err)
+			}
 		} else {
-			sc.HD.Services.StrategyService.UnassignUser(userId)
+			if err := sc.HD.Services.UnassignUser(userId); err != nil {
+				sc.HD.Logger.Warnf("UnassignUser fail: user=%d %v", userId, err)
+			}
 		}
 	}
 
 	// Assign/unassign device groups
 	for _, groupId := range f.Groups {
 		if strategyId > 0 {
-			sc.HD.Services.StrategyService.AssignToDeviceGroup(strategyId, groupId)
+			if err := sc.HD.Services.AssignToDeviceGroup(strategyId, groupId); err != nil {
+				sc.HD.Logger.Warnf("AssignToDeviceGroup fail: strategy=%d group=%d %v", strategyId, groupId, err)
+			}
 		} else {
-			sc.HD.Services.StrategyService.UnassignDeviceGroup(groupId)
+			if err := sc.HD.Services.UnassignDeviceGroup(groupId); err != nil {
+				sc.HD.Logger.Warnf("UnassignDeviceGroup fail: group=%d %v", groupId, err)
+			}
 		}
 	}
 

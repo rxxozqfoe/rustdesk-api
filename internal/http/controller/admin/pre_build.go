@@ -22,7 +22,7 @@ type PreBuild struct {
 // @Router /admin/pre-build/versions [get]
 // @Security token
 func (ct *PreBuild) Versions(c *gin.Context) {
-	versions := ct.HD.Services.WorkerRegistryService.GetAllVersions()
+	versions := ct.HD.Services.GetAllVersions()
 	response.Success(c, versions)
 }
 
@@ -46,7 +46,7 @@ func (ct *PreBuild) Trigger(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	job, err := ct.HD.Services.PreBuildService.Trigger(f.Version, f.Platform, f.Arch)
+	job, err := ct.HD.Services.Trigger(f.Version, f.Platform, f.Arch)
 	if err != nil {
 		response.Fail(c, 101, err.Error())
 		return
@@ -114,7 +114,7 @@ func (ct *PreBuild) Log(c *gin.Context) {
 	offsetStr := c.DefaultQuery("offset", "0")
 	offset, _ := strconv.ParseInt(offsetStr, 10, 64)
 
-	content, newOffset, err := ct.HD.Services.PreBuildService.GetLog(uint(iid), offset)
+	content, newOffset, err := ct.HD.Services.GetLog(uint(iid), offset)
 	if err != nil {
 		response.Fail(c, 101, "failed to read log: "+err.Error())
 		return
@@ -136,7 +136,7 @@ func (ct *PreBuild) Log(c *gin.Context) {
 func (ct *PreBuild) Cancel(c *gin.Context) {
 	id := c.Param("id")
 	iid, _ := strconv.Atoi(id)
-	if err := ct.HD.Services.PreBuildService.Cancel(uint(iid)); err != nil {
+	if err := ct.HD.Services.Cancel(uint(iid)); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}

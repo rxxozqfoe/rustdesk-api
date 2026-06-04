@@ -33,7 +33,7 @@ func (a *Audit) ConnList(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
 		return
 	}
-	res := a.HD.Services.AuditService.AuditConnList(query.Page, query.PageSize, func(tx *gorm.DB) {
+	res := a.HD.Services.AuditConnList(query.Page, query.PageSize, func(tx *gorm.DB) {
 		if query.PeerId != "" {
 			tx.Where("peer_id like ?", "%"+query.PeerId+"%")
 		}
@@ -68,9 +68,9 @@ func (a *Audit) ConnDelete(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	l := a.HD.Services.AuditService.ConnInfoById(f.Id)
+	l := a.HD.Services.ConnInfoById(f.Id)
 	if l.Id > 0 {
-		err := a.HD.Services.AuditService.DeleteAuditConn(l)
+		err := a.HD.Services.DeleteAuditConn(l)
 		if err == nil {
 			response.Success(c, nil)
 			return
@@ -103,13 +103,12 @@ func (a *Audit) BatchConnDelete(c *gin.Context) {
 		return
 	}
 
-	err := a.HD.Services.AuditService.BatchDeleteAuditConn(f.Ids)
+	err := a.HD.Services.BatchDeleteAuditConn(f.Ids)
 	if err == nil {
 		response.Success(c, nil)
 		return
 	}
 	response.Fail(c, 101, err.Error())
-	return
 }
 
 // ConnDisconnect 断开连接
@@ -138,7 +137,7 @@ func (a *Audit) ConnDisconnect(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
-	err := a.HD.Services.PeerCommandService.CreateDisconnect(f.PeerId, f.ConnIds)
+	err := a.HD.Services.CreateDisconnect(f.PeerId, f.ConnIds)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -166,7 +165,7 @@ func (a *Audit) FileList(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
 		return
 	}
-	res := a.HD.Services.AuditService.AuditFileList(query.Page, query.PageSize, func(tx *gorm.DB) {
+	res := a.HD.Services.AuditFileList(query.Page, query.PageSize, func(tx *gorm.DB) {
 		if query.PeerId != "" {
 			tx.Where("peer_id like ?", "%"+query.PeerId+"%")
 		}
@@ -201,9 +200,9 @@ func (a *Audit) FileDelete(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	l := a.HD.Services.AuditService.FileInfoById(f.Id)
+	l := a.HD.Services.FileInfoById(f.Id)
 	if l.Id > 0 {
-		err := a.HD.Services.AuditService.DeleteAuditFile(l)
+		err := a.HD.Services.DeleteAuditFile(l)
 		if err == nil {
 			response.Success(c, nil)
 			return
@@ -236,11 +235,10 @@ func (a *Audit) BatchFileDelete(c *gin.Context) {
 		return
 	}
 
-	err := a.HD.Services.AuditService.BatchDeleteAuditFile(f.Ids)
+	err := a.HD.Services.BatchDeleteAuditFile(f.Ids)
 	if err == nil {
 		response.Success(c, nil)
 		return
 	}
 	response.Fail(c, 101, err.Error())
-	return
 }

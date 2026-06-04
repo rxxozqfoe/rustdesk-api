@@ -38,7 +38,6 @@ func (ct *User) Detail(c *gin.Context) {
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // Create 管理员
@@ -197,7 +196,7 @@ func (ct *User) UpdatePassword(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 		return
 	}
-	err := ct.HD.Services.UserService.UpdatePassword(u, f.Password)
+	err := ct.HD.Services.UpdatePassword(u, f.Password)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -247,14 +246,14 @@ func (ct *User) ChangeCurPwd(c *gin.Context) {
 	}
 	u := helper.CurUser(c)
 	// Verify the old password only when the account already has one set
-	if !ct.HD.Services.UserService.IsPasswordEmptyByUser(u) {
+	if !ct.HD.Services.IsPasswordEmptyByUser(u) {
 		ok, _, err := utils.VerifyPassword(u.Password, f.OldPassword)
 		if err != nil || !ok {
 			response.Fail(c, 101, response.TranslateMsg(c, "OldPasswordError"))
 			return
 		}
 	}
-	err := ct.HD.Services.UserService.UpdatePassword(u, f.NewPassword)
+	err := ct.HD.Services.UpdatePassword(u, f.NewPassword)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -275,11 +274,7 @@ func (ct *User) ChangeCurPwd(c *gin.Context) {
 func (ct *User) MyOauth(c *gin.Context) {
 	u := helper.CurUser(c)
 	oal := ct.HD.Services.OauthService.List(1, 100, nil)
-	ops := make([]string, 0)
-	for _, oa := range oal.Oauths {
-		ops = append(ops, oa.Op)
-	}
-	uts := ct.HD.Services.UserService.UserThirdsByUserId(u.Id)
+	uts := ct.HD.Services.UserThirdsByUserId(u.Id)
 	var res []*adResp.UserOauthItem
 	for _, oa := range oal.Oauths {
 		item := &adResp.UserOauthItem{
@@ -339,7 +334,7 @@ func (ct *User) Register(c *gin.Context) {
 		return
 	}
 	// 注册成功后自动登录
-	ut := ct.HD.Services.UserService.Login(u, &model.LoginLog{
+	ut := ct.HD.Services.Login(u, &model.LoginLog{
 		UserId: u.Id,
 		Client: model.LoginLogClientWebAdmin,
 		Uuid:   "",

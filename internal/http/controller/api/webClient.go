@@ -55,13 +55,16 @@ func (i *WebClient) ServerConfig(c *gin.Context) {
 // @Router /shared-peer [post]
 func (i *WebClient) SharedPeer(c *gin.Context) {
 	j := &gin.H{}
-	c.ShouldBindJSON(j)
-	t := (*j)["share_token"].(string)
+	if err := c.ShouldBindJSON(j); err != nil {
+		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
+		return
+	}
+	t, _ := (*j)["share_token"].(string)
 	if t == "" {
 		response.Fail(c, 101, "share_token is required")
 		return
 	}
-	sr := i.HD.Services.AddressBookService.SharedPeer(t)
+	sr := i.HD.Services.SharedPeer(t)
 	if sr == nil || sr.Id == 0 {
 		response.Fail(c, 101, "share not found")
 		return
@@ -75,7 +78,7 @@ func (i *WebClient) SharedPeer(c *gin.Context) {
 		}
 	}
 
-	ab := i.HD.Services.AddressBookService.InfoByUserIdAndId(sr.UserId, sr.PeerId)
+	ab := i.HD.Services.InfoByUserIdAndId(sr.UserId, sr.PeerId)
 	if ab.RowId == 0 {
 		response.Fail(c, 101, "peer not found")
 		return

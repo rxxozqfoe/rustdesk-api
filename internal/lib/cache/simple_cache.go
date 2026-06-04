@@ -9,10 +9,8 @@ import (
 // 此处实现了一个简单的缓存，用于测试
 // SimpleCache is a simple cache implementation
 type SimpleCache struct {
-	data      map[string]interface{}
-	mu        sync.Mutex
-	maxBytes  int64
-	usedBytes int64
+	data map[string]interface{}
+	mu   sync.Mutex
 }
 
 func (s *SimpleCache) Get(key string, value interface{}) error {
@@ -21,7 +19,7 @@ func (s *SimpleCache) Get(key string, value interface{}) error {
 
 	// 使用反射将存储的值设置到传入的指针变量中
 	val := reflect.ValueOf(value)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return errors.New("value must be a pointer")
 	}
 	v, ok := s.data[key]
@@ -47,7 +45,7 @@ func (s *SimpleCache) Set(key string, value interface{}, exp int) error {
 	defer s.mu.Unlock()
 	// 检查传入的值是否是指针，如果是则取其值
 	val := reflect.ValueOf(value)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 

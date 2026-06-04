@@ -45,7 +45,7 @@ func (g *Group) Users(c *gin.Context) {
 		userList.Users = append(userList.Users, u)
 		userList.Total = 1
 	} else {
-		userList = g.HD.Services.UserService.ListByGroupId(u.GroupId, q.Page, q.PageSize)
+		userList = g.HD.Services.ListByGroupId(u.GroupId, q.Page, q.PageSize)
 	}
 
 	data := make([]*apiResp.UserPayload, 0, len(userList.Users))
@@ -88,7 +88,7 @@ func (g *Group) Peers(c *gin.Context) {
 		//仅能获取到自己
 		users = append(users, u)
 	} else {
-		users = g.HD.Services.UserService.ListIdAndNameByGroupId(u.GroupId)
+		users = g.HD.Services.ListIdAndNameByGroupId(u.GroupId)
 	}
 
 	namesById := make(map[uint]string, len(users))
@@ -98,7 +98,7 @@ func (g *Group) Peers(c *gin.Context) {
 		userIds = append(userIds, user.Id)
 	}
 	dGroupNameById := make(map[uint]string)
-	allGroup := g.HD.Services.GroupService.DeviceGroupList(1, 999, nil)
+	allGroup := g.HD.Services.DeviceGroupList(1, 999, nil)
 	for _, group := range allGroup.DeviceGroups {
 		dGroupNameById[group.Id] = group.Name
 	}
@@ -140,11 +140,11 @@ func (g *Group) Peers(c *gin.Context) {
 // @Security BearerAuth
 func (g *Group) Device(c *gin.Context) {
 	u := helper.CurUser(c)
-	if !g.HD.Services.UserService.IsAdmin(u) {
+	if !g.HD.Services.IsAdmin(u) {
 		response.Error(c, "Permission denied")
 		return
 	}
-	allGroup := g.HD.Services.GroupService.DeviceGroupList(1, 999, nil)
+	allGroup := g.HD.Services.DeviceGroupList(1, 999, nil)
 
 	c.JSON(http.StatusOK, response.DataResponse{
 		Total: 0,

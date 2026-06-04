@@ -46,13 +46,16 @@ func NewValidator(cfg *config.Config) AppValidator {
 	frTrans, _ := uni.GetTranslator("fr")
 	zhTwTrans, _ := uni.GetTranslator("zh_Hant")
 
-	zh_translations.RegisterDefaultTranslations(validate, zhTrans)
-	en_translations.RegisterDefaultTranslations(validate, enTrans)
-	ko_translations.RegisterDefaultTranslations(validate, koTrans)
-	ru_translations.RegisterDefaultTranslations(validate, ruTrans)
-	es_translations.RegisterDefaultTranslations(validate, esTrans)
-	fr_translations.RegisterDefaultTranslations(validate, frTrans)
-	zh_tw_translations.RegisterDefaultTranslations(validate, zhTwTrans)
+	// Registering the built-in default translations for the bundled locales
+	// cannot fail at runtime; ignore the returned errors for these static
+	// translators.
+	_ = zh_translations.RegisterDefaultTranslations(validate, zhTrans)
+	_ = en_translations.RegisterDefaultTranslations(validate, enTrans)
+	_ = ko_translations.RegisterDefaultTranslations(validate, koTrans)
+	_ = ru_translations.RegisterDefaultTranslations(validate, ruTrans)
+	_ = es_translations.RegisterDefaultTranslations(validate, esTrans)
+	_ = fr_translations.RegisterDefaultTranslations(validate, frTrans)
+	_ = zh_tw_translations.RegisterDefaultTranslations(validate, zhTwTrans)
 
 	validate.RegisterTagNameFunc(func(field reflect.StructField) string {
 		label := field.Tag.Get("label")

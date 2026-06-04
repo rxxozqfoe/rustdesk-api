@@ -36,19 +36,12 @@ func (ps *PeerService) FindByUserIdAndUuid(uuid string, userId uint) *model.Peer
 // UuidBindUserId 绑定用户id
 func (ps *PeerService) UuidBindUserId(deviceId string, uuid string, userId uint) {
 	peer := ps.FindByUuid(uuid)
-	// 如果存在则更新
+	// 如果存在则更新；不存在则不处理（不自动创建 peer）
 	if peer.RowId > 0 {
 		peer.UserId = userId
-		ps.Update(peer)
-	} else {
-		// 不存在则创建
-		/*if deviceId != "" {
-			DB.Create(&model.Peer{
-				Id:     deviceId,
-				Uuid:   uuid,
-				UserId: userId,
-			})
-		}*/
+		if err := ps.Update(peer); err != nil {
+			ps.ctx.Logger.Warnf("bind user to peer fail: peer=%d user=%d %v", peer.RowId, userId, err)
+		}
 	}
 }
 
@@ -106,7 +99,7 @@ func (ps *PeerService) Delete(u *model.Peer) error {
 		return err
 	}
 	// 删除token
-	return ps.ctx.Services.UserService.FlushTokenByUuid(uuid)
+	return ps.ctx.Services.FlushTokenByUuid(uuid)
 }
 
 // GetUuidListByIDs 根据ids获取uuid列表
@@ -128,12 +121,15 @@ func (ps *PeerService) GetUuidListByIDs(ids []uint) ([]string, error) {
 // BatchDelete 批量删除, 同时也应该删除token
 func (ps *PeerService) BatchDelete(ids []uint) error {
 	uuids, err := ps.GetUuidListByIDs(ids)
+	if err != nil {
+		return err
+	}
 	err = ps.ctx.DB.Where("row_id in (?)", ids).Delete(&model.Peer{}).Error
 	if err != nil {
 		return err
 	}
 	// 删除token
-	return ps.ctx.Services.UserService.FlushTokenByUuids(uuids)
+	return ps.ctx.Services.FlushTokenByUuids(uuids)
 }
 
 // Update 更新

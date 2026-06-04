@@ -26,12 +26,16 @@ func TestHeartbeat_FullSimulation(t *testing.T) {
 		Enabled:       model.BoolPtr(true),
 		ConfigOptions: makeJSON(opts),
 	}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	// Setup: create peer and assign strategy
 	peer := &model.Peer{Id: "test-peer-1", UserId: 0, GroupId: 0}
 	db.Create(peer)
-	ss.AssignToPeer(s.Id, peer.RowId)
+	if err := ss.AssignToPeer(s.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
 
 	// Simulate heartbeat: client sends modified_at = 0 (first boot)
 	clientModifiedAt := int64(0)
@@ -121,11 +125,15 @@ func TestHeartbeat_SecondCallSkipsStrategy(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "skip-test", Enabled: model.BoolPtr(true), ConfigOptions: makeJSON(map[string]string{"enable-audio": "N"})}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "test-peer-2", UserId: 0, GroupId: 0}
 	db.Create(peer)
-	ss.AssignToPeer(s.Id, peer.RowId)
+	if err := ss.AssignToPeer(s.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
 
 	// First heartbeat
 	strategy := ss.ResolveForPeer(peer)
@@ -169,10 +177,14 @@ func TestHeartbeat_NoStrategyAssigned(t *testing.T) {
 	t.Logf("No-strategy response: %s", string(jsonBytes))
 
 	var parsed map[string]json.RawMessage
-	json.Unmarshal(jsonBytes, &parsed)
+	if err := json.Unmarshal(jsonBytes, &parsed); err != nil {
+		t.Fatal(err)
+	}
 
 	var modifiedAt int64
-	json.Unmarshal(parsed["modified_at"], &modifiedAt)
+	if err := json.Unmarshal(parsed["modified_at"], &modifiedAt); err != nil {
+		t.Fatal(err)
+	}
 	if modifiedAt != 0 {
 		t.Errorf("modified_at should be 0 when no strategy, got %d", modifiedAt)
 	}
@@ -188,14 +200,18 @@ func TestHeartbeat_UserLevelStrategy(t *testing.T) {
 		Enabled:       model.BoolPtr(true),
 		ConfigOptions: makeJSON(map[string]string{"enable-terminal": "N"}),
 	}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	// Peer belongs to user 50
 	peer := &model.Peer{Id: "test-peer-4", UserId: 50, GroupId: 0}
 	db.Create(peer)
 
 	// Assign strategy to user 50 (not directly to peer)
-	ss.AssignToUser(s.Id, 50)
+	if err := ss.AssignToUser(s.Id, 50); err != nil {
+		t.Fatal(err)
+	}
 
 	strategy := ss.ResolveForPeer(peer)
 	if strategy == nil {
@@ -215,14 +231,20 @@ func TestHeartbeat_DisabledStrategyNotSent(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "disabled-policy", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "test-peer-5", UserId: 0, GroupId: 0}
 	db.Create(peer)
-	ss.AssignToPeer(s.Id, peer.RowId)
+	if err := ss.AssignToPeer(s.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
 
 	// Disable the strategy
-	ss.SetEnabled(s.Id, false)
+	if err := ss.SetEnabled(s.Id, false); err != nil {
+		t.Fatal(err)
+	}
 
 	strategy := ss.ResolveForPeer(peer)
 	resp := gin.H{}

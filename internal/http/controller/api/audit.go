@@ -36,16 +36,21 @@ func (a *Audit) AuditConn(c *gin.Context) {
 	c.ShouldBindBodyWith(ttt, binding.JSON)
 	fmt.Println(ttt)*/
 	ac := af.ToAuditConn()
-	if af.Action == model.AuditActionNew {
-		a.HD.Services.AuditService.CreateAuditConn(ac)
-	} else if af.Action == model.AuditActionClose {
-		ex := a.HD.Services.AuditService.InfoByPeerIdAndConnId(af.Id, af.ConnId)
+	switch af.Action {
+	case model.AuditActionNew:
+		if err := a.HD.Services.CreateAuditConn(ac); err != nil {
+			a.HD.Logger.Warnf("CreateAuditConn fail: %v", err)
+		}
+	case model.AuditActionClose:
+		ex := a.HD.Services.InfoByPeerIdAndConnId(af.Id, af.ConnId)
 		if ex.Id != 0 {
 			ex.CloseTime = time.Now().Unix()
-			a.HD.Services.AuditService.UpdateAuditConn(ex)
+			if err := a.HD.Services.UpdateAuditConn(ex); err != nil {
+				a.HD.Logger.Warnf("UpdateAuditConn fail: %v", err)
+			}
 		}
-	} else if af.Action == "" {
-		ex := a.HD.Services.AuditService.InfoByPeerIdAndConnId(af.Id, af.ConnId)
+	case "":
+		ex := a.HD.Services.InfoByPeerIdAndConnId(af.Id, af.ConnId)
 		if ex.Id != 0 {
 			up := &model.AuditConn{
 				IdModel:   model.IdModel{Id: ex.Id},
@@ -54,7 +59,9 @@ func (a *Audit) AuditConn(c *gin.Context) {
 				SessionId: ac.SessionId,
 				Type:      ac.Type,
 			}
-			a.HD.Services.AuditService.UpdateAuditConn(up)
+			if err := a.HD.Services.UpdateAuditConn(up); err != nil {
+				a.HD.Logger.Warnf("UpdateAuditConn fail: %v", err)
+			}
 		}
 	}
 	response.Success(c, "")
@@ -81,6 +88,8 @@ func (a *Audit) AuditFile(c *gin.Context) {
 	//c.ShouldBindBodyWith(ttt, binding.JSON)
 	//fmt.Println(ttt)
 	af := aff.ToAuditFile()
-	a.HD.Services.AuditService.CreateAuditFile(af)
+	if err := a.HD.Services.CreateAuditFile(af); err != nil {
+		a.HD.Logger.Warnf("CreateAuditFile fail: %v", err)
+	}
 	response.Success(c, "")
 }

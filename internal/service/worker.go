@@ -33,7 +33,9 @@ type WorkerJob struct {
 func (s *WorkerService) FetchPendingJob(workerName string, platforms []model.WorkerPlatform) (*WorkerJob, error) {
 	// Update worker heartbeat on poll
 	if workerName != "" {
-		s.ctx.Services.WorkerRegistryService.Heartbeat(workerName)
+		if err := s.ctx.Services.Heartbeat(workerName); err != nil {
+			s.ctx.Logger.Warnf("worker heartbeat fail: %s %v", workerName, err)
+		}
 	}
 
 	// Try pre-build first
@@ -82,7 +84,7 @@ func (s *WorkerService) FetchPendingJob(workerName string, platforms []model.Wor
 	tx2.Order("id ASC").First(cc)
 	if cc.Id > 0 {
 		// Generate custom.txt (signed by API server — worker just injects it)
-		customTxt, err := s.ctx.Services.CustomClientService.GenerateCustomTxt(cc)
+		customTxt, err := s.ctx.Services.GenerateCustomTxt(cc)
 		if err != nil {
 			// Mark the job as failed so we don't retry it forever
 			s.ctx.DB.Model(cc).Updates(map[string]any{
@@ -93,7 +95,7 @@ func (s *WorkerService) FetchPendingJob(workerName string, platforms []model.Wor
 		}
 
 		// Find artifact
-		ba := s.ctx.Services.BuildArtifactService.FindByPlatformArchVersion(cc.Platform, cc.Arch, cc.Version)
+		ba := s.ctx.Services.FindByPlatformArchVersion(cc.Platform, cc.Arch, cc.Version)
 		var artifactS3Key, artifactDir string
 		if ba.Id > 0 {
 			artifactS3Key = ba.S3Key
@@ -148,9 +150,11 @@ func (s *WorkerService) AppendLog(jobID uint, content string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = f.WriteString(content)
-	return err
+	if _, err := f.WriteString(content); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 // CompletePreBuild marks a pre-build job as completed and registers the artifact.
@@ -169,7 +173,7 @@ func (s *WorkerService) CompletePreBuild(jobID uint, s3Key, logS3Key string) err
 		S3Key:    s3Key,
 		Source:   "worker_build",
 	}
-	existing := s.ctx.Services.BuildArtifactService.FindByPlatformArchVersion(pb.Platform, pb.Arch, pb.Version)
+	existing := s.ctx.Services.FindByPlatformArchVersion(pb.Platform, pb.Arch, pb.Version)
 	if existing.Id > 0 {
 		existing.S3Key = s3Key
 		existing.Source = "worker_build"
@@ -186,9 +190,11 @@ func (s *WorkerService) CompletePreBuild(jobID uint, s3Key, logS3Key string) err
 		"completed_at": &now,
 	}
 	if logS3Key != "" {
-		// Clean up local log cache
+		// Clean up local log cache (best-effort)
 		if pb.LogPath != "" {
-			os.Remove(pb.LogPath)
+			if err := os.Remove(pb.LogPath); err != nil && !os.IsNotExist(err) {
+				s.ctx.Logger.Warnf("remove local log cache fail: %s %v", pb.LogPath, err)
+			}
 		}
 		updates["log_path"] = logS3Key
 	}
@@ -218,7 +224,9 @@ func (s *WorkerService) FailJob(jobID uint, jobType string, errMsg string, logS3
 			pb := &model.PreBuild{}
 			s.ctx.DB.Where("id = ?", jobID).First(pb)
 			if pb.LogPath != "" {
-				os.Remove(pb.LogPath)
+				if err := os.Remove(pb.LogPath); err != nil && !os.IsNotExist(err) {
+					s.ctx.Logger.Warnf("remove local log cache fail: %s %v", pb.LogPath, err)
+				}
 			}
 			updates["log_path"] = logS3Key
 		}

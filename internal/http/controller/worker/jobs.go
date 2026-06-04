@@ -47,7 +47,7 @@ func (j *Jobs) Heartbeat(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerRegistryService.Heartbeat(req.Name); err != nil {
+	if err := j.HD.Services.Heartbeat(req.Name); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}
@@ -65,7 +65,7 @@ func (j *Jobs) PushVersions(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerRegistryService.PushVersions(req.Name, req.Versions); err != nil {
+	if err := j.HD.Services.PushVersions(req.Name, req.Versions); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}
@@ -83,7 +83,7 @@ func (j *Jobs) FetchPending(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	job, err := j.HD.Services.WorkerService.FetchPendingJob(req.Name, req.Platforms)
+	job, err := j.HD.Services.FetchPendingJob(req.Name, req.Platforms)
 	if err != nil {
 		response.Fail(c, 101, err.Error())
 		return
@@ -134,7 +134,7 @@ func (j *Jobs) Start(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerService.StartJob(uint(id), req.Type); err != nil {
+	if err := j.HD.Services.StartJob(uint(id), req.Type); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}
@@ -152,7 +152,7 @@ func (j *Jobs) AppendLog(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerService.AppendLog(uint(id), req.Content); err != nil {
+	if err := j.HD.Services.AppendLog(uint(id), req.Content); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}
@@ -177,9 +177,9 @@ func (j *Jobs) Complete(c *gin.Context) {
 	var err error
 	switch req.Type {
 	case "pre-build":
-		err = j.HD.Services.WorkerService.CompletePreBuild(uint(id), req.S3Key, req.LogS3Key)
+		err = j.HD.Services.CompletePreBuild(uint(id), req.S3Key, req.LogS3Key)
 	case "bundle":
-		err = j.HD.Services.WorkerService.CompleteBundle(uint(id), req.S3Key, req.FileSize)
+		err = j.HD.Services.CompleteBundle(uint(id), req.S3Key, req.FileSize)
 	default:
 		response.Fail(c, 101, "unknown job type: "+req.Type)
 		return
@@ -204,7 +204,7 @@ func (j *Jobs) Fail(c *gin.Context) {
 		response.Fail(c, 101, "invalid request: "+err.Error())
 		return
 	}
-	if err := j.HD.Services.WorkerService.FailJob(uint(id), req.Type, req.Error, req.LogS3Key); err != nil {
+	if err := j.HD.Services.FailJob(uint(id), req.Type, req.Error, req.LogS3Key); err != nil {
 		response.Fail(c, 101, err.Error())
 		return
 	}

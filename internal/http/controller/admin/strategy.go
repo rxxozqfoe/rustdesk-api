@@ -178,7 +178,7 @@ func (ct *Strategy) Assign(c *gin.Context) {
 
 	var strategyId uint
 	if f.Strategy != "" {
-		s := ct.HD.Services.StrategyService.InfoByGuid(f.Strategy)
+		s := ct.HD.Services.InfoByGuid(f.Strategy)
 		if s.Id == 0 {
 			response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
 			return
@@ -187,30 +187,42 @@ func (ct *Strategy) Assign(c *gin.Context) {
 	}
 
 	for _, peerId := range f.Peers {
-		peer := ct.HD.Services.PeerService.FindById(peerId)
+		peer := ct.HD.Services.FindById(peerId)
 		if peer == nil || peer.RowId == 0 {
 			continue
 		}
 		if strategyId > 0 {
-			ct.HD.Services.StrategyService.AssignToPeer(strategyId, peer.RowId)
+			if err := ct.HD.Services.AssignToPeer(strategyId, peer.RowId); err != nil {
+				ct.HD.Logger.Warnf("AssignToPeer fail: strategy=%d peer=%d %v", strategyId, peer.RowId, err)
+			}
 		} else {
-			ct.HD.Services.StrategyService.UnassignPeer(peer.RowId)
+			if err := ct.HD.Services.UnassignPeer(peer.RowId); err != nil {
+				ct.HD.Logger.Warnf("UnassignPeer fail: peer=%d %v", peer.RowId, err)
+			}
 		}
 	}
 
 	for _, userId := range f.Users {
 		if strategyId > 0 {
-			ct.HD.Services.StrategyService.AssignToUser(strategyId, userId)
+			if err := ct.HD.Services.AssignToUser(strategyId, userId); err != nil {
+				ct.HD.Logger.Warnf("AssignToUser fail: strategy=%d user=%d %v", strategyId, userId, err)
+			}
 		} else {
-			ct.HD.Services.StrategyService.UnassignUser(userId)
+			if err := ct.HD.Services.UnassignUser(userId); err != nil {
+				ct.HD.Logger.Warnf("UnassignUser fail: user=%d %v", userId, err)
+			}
 		}
 	}
 
 	for _, groupId := range f.Groups {
 		if strategyId > 0 {
-			ct.HD.Services.StrategyService.AssignToDeviceGroup(strategyId, groupId)
+			if err := ct.HD.Services.AssignToDeviceGroup(strategyId, groupId); err != nil {
+				ct.HD.Logger.Warnf("AssignToDeviceGroup fail: strategy=%d group=%d %v", strategyId, groupId, err)
+			}
 		} else {
-			ct.HD.Services.StrategyService.UnassignDeviceGroup(groupId)
+			if err := ct.HD.Services.UnassignDeviceGroup(groupId); err != nil {
+				ct.HD.Logger.Warnf("UnassignDeviceGroup fail: group=%d %v", groupId, err)
+			}
 		}
 	}
 
@@ -247,7 +259,7 @@ func (ct *Strategy) Assignments(c *gin.Context) {
 	var assignments []StrategyAssignment
 
 	// Peer assignments
-	sps := ct.HD.Services.StrategyService.PeerAssignments(s.Id)
+	sps := ct.HD.Services.PeerAssignments(s.Id)
 	for _, sp := range sps {
 		peer := ct.HD.Services.PeerService.InfoByRowId(sp.PeerRowId)
 		if peer.RowId > 0 {
@@ -260,7 +272,7 @@ func (ct *Strategy) Assignments(c *gin.Context) {
 	}
 
 	// User assignments
-	sus := ct.HD.Services.StrategyService.UserAssignments(s.Id)
+	sus := ct.HD.Services.UserAssignments(s.Id)
 	for _, su := range sus {
 		user := ct.HD.Services.UserService.InfoById(su.UserId)
 		if user.Id > 0 {
@@ -273,9 +285,9 @@ func (ct *Strategy) Assignments(c *gin.Context) {
 	}
 
 	// Device group assignments
-	sdgs := ct.HD.Services.StrategyService.DeviceGroupAssignments(s.Id)
+	sdgs := ct.HD.Services.DeviceGroupAssignments(s.Id)
 	for _, sdg := range sdgs {
-		dg := ct.HD.Services.GroupService.DeviceGroupInfoById(sdg.DeviceGroupId)
+		dg := ct.HD.Services.DeviceGroupInfoById(sdg.DeviceGroupId)
 		if dg.Id > 0 {
 			assignments = append(assignments, StrategyAssignment{Type: "device_group", Id: dg.Id, Name: dg.Name})
 		}

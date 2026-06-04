@@ -61,7 +61,10 @@ func (r *Record) Upload(c *gin.Context) {
 			response.Error(c, "failed to create file: "+err.Error())
 			return
 		}
-		f.Close()
+		if err := f.Close(); err != nil {
+			response.Error(c, "failed to close file: "+err.Error())
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{})
 
 	case "part":
@@ -74,15 +77,20 @@ func (r *Record) Upload(c *gin.Context) {
 			response.Error(c, "failed to open file: "+err.Error())
 			return
 		}
-		defer f.Close()
 
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
+			_ = f.Close()
 			response.Error(c, "failed to seek: "+err.Error())
 			return
 		}
 
 		if _, err := io.Copy(f, c.Request.Body); err != nil {
+			_ = f.Close()
 			response.Error(c, "failed to write data: "+err.Error())
+			return
+		}
+		if err := f.Close(); err != nil {
+			response.Error(c, "failed to close file: "+err.Error())
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{})
@@ -97,22 +105,31 @@ func (r *Record) Upload(c *gin.Context) {
 			response.Error(c, "failed to open file: "+err.Error())
 			return
 		}
-		defer f.Close()
 
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
+			_ = f.Close()
 			response.Error(c, "failed to seek: "+err.Error())
 			return
 		}
 
 		if _, err := io.Copy(f, c.Request.Body); err != nil {
+			_ = f.Close()
 			response.Error(c, "failed to write data: "+err.Error())
+			return
+		}
+		if err := f.Close(); err != nil {
+			response.Error(c, "failed to close file: "+err.Error())
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{})
 
 	case "remove":
 		fp := filepath.Join(dir, fileName)
-		os.Remove(fp)
+		// best-effort removal; report failure to caller
+		if err := os.Remove(fp); err != nil && !os.IsNotExist(err) {
+			response.Error(c, "failed to remove file: "+err.Error())
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{})
 
 	default:

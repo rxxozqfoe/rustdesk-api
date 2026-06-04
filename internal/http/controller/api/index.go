@@ -52,7 +52,7 @@ func (i *Index) Heartbeat(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
-	peer := i.HD.Services.PeerService.FindById(info.Id)
+	peer := i.HD.Services.FindById(info.Id)
 	if peer == nil || peer.RowId == 0 {
 		c.JSON(http.StatusOK, gin.H{})
 		return
@@ -60,21 +60,23 @@ func (i *Index) Heartbeat(c *gin.Context) {
 	//如果在40s以内则不更新
 	if time.Now().Unix()-peer.LastOnlineTime >= 30 {
 		upp := &model.Peer{RowId: peer.RowId, LastOnlineTime: time.Now().Unix(), LastOnlineIp: c.ClientIP()}
-		i.HD.Services.PeerService.Update(upp)
+		if err := i.HD.Services.PeerService.Update(upp); err != nil {
+			i.HD.Logger.Warnf("update peer last online fail: peer=%d %v", peer.RowId, err)
+		}
 	}
 
 	resp := gin.H{}
 
 	// Resolve strategy for this peer
-	strategy := i.HD.Services.StrategyService.ResolveForPeer(peer)
+	strategy := i.HD.Services.ResolveForPeer(peer)
 	if strategy != nil {
 		serverModifiedAt := time.Time(strategy.UpdatedAt).Unix()
 		resp["modified_at"] = serverModifiedAt
 		// Only include strategy payload when client's timestamp differs
 		if info.ModifiedAt != serverModifiedAt {
 			resp["strategy"] = gin.H{
-				"config_options": i.HD.Services.StrategyService.ConfigOptionsMap(strategy),
-				"extra":          i.HD.Services.StrategyService.ExtraMap(strategy),
+				"config_options": i.HD.Services.ConfigOptionsMap(strategy),
+				"extra":          i.HD.Services.ExtraMap(strategy),
 			}
 		}
 	} else {
@@ -87,7 +89,7 @@ func (i *Index) Heartbeat(c *gin.Context) {
 	}
 
 	// Collect pending disconnect commands for this peer
-	cmds := i.HD.Services.PeerCommandService.PendingByPeerId(peer.Id)
+	cmds := i.HD.Services.PendingByPeerId(peer.Id)
 	if len(cmds) > 0 {
 		var allConnIds []int
 		var processedIds []uint
@@ -108,7 +110,7 @@ func (i *Index) Heartbeat(c *gin.Context) {
 			}
 			resp["disconnect"] = allConnIds
 		}
-		i.HD.Services.PeerCommandService.DeleteByIds(processedIds)
+		i.HD.Services.DeleteByIds(processedIds)
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -125,7 +127,7 @@ func (i *Index) Heartbeat(c *gin.Context) {
 // @Router /version [get]
 func (i *Index) Version(c *gin.Context) {
 	//读取resources/version文件
-	v := i.HD.Services.AppService.GetAppVersion()
+	v := i.HD.Services.GetAppVersion()
 	response.Success(
 		c,
 		v,

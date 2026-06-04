@@ -65,8 +65,8 @@ func (co *Config) AdminConfig(c *gin.Context) {
 	u := &model.User{}
 	token := c.GetHeader("api-token")
 	if token != "" {
-		u, _ = co.HD.Services.UserService.InfoByAccessToken(token)
-		if !co.HD.Services.UserService.CheckUserEnable(u) {
+		u, _ = co.HD.Services.InfoByAccessToken(token)
+		if !co.HD.Services.CheckUserEnable(u) {
 			u.Id = 0
 		}
 	}
@@ -90,7 +90,7 @@ func (co *Config) AdminConfig(c *gin.Context) {
 	}
 
 	//replace {{username}} to username
-	hello = strings.Replace(hello, "{{username}}", u.Username, -1)
+	hello = strings.ReplaceAll(hello, "{{username}}", u.Username)
 	response.Success(c, &gin.H{
 		"title": co.HD.Config.Admin.Title,
 		"hello": hello,

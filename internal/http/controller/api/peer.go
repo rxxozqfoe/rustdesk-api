@@ -34,10 +34,10 @@ func (p *Peer) SysInfo(c *gin.Context) {
 		return
 	}
 	fpe := f.ToPeer()
-	pe := p.HD.Services.PeerService.FindById(f.Id)
+	pe := p.HD.Services.FindById(f.Id)
 	if pe.RowId == 0 {
 		pe = f.ToPeer()
-		pe.UserId = p.HD.Services.UserService.FindLatestUserIdFromLoginLogByUuid(pe.Uuid, pe.Id)
+		pe.UserId = p.HD.Services.FindLatestUserIdFromLoginLogByUuid(pe.Uuid, pe.Id)
 		err = p.HD.Services.PeerService.Create(pe)
 		if err != nil {
 			response.Error(c, response.TranslateMsg(c, "OperationFailed")+err.Error())
@@ -45,7 +45,7 @@ func (p *Peer) SysInfo(c *gin.Context) {
 		}
 	} else {
 		if pe.UserId == 0 {
-			pe.UserId = p.HD.Services.UserService.FindLatestUserIdFromLoginLogByUuid(pe.Uuid, pe.Id)
+			pe.UserId = p.HD.Services.FindLatestUserIdFromLoginLogByUuid(pe.Uuid, pe.Id)
 		}
 		fpe.RowId = pe.RowId
 		fpe.UserId = pe.UserId
@@ -57,19 +57,23 @@ func (p *Peer) SysInfo(c *gin.Context) {
 	}
 	// Handle preset-strategy-name: auto-assign strategy to this peer
 	if f.PresetStrategyName != "" {
-		strategy := p.HD.Services.StrategyService.InfoByName(f.PresetStrategyName)
+		strategy := p.HD.Services.InfoByName(f.PresetStrategyName)
 		if strategy != nil && strategy.Id > 0 {
-			p.HD.Services.StrategyService.AssignToPeer(strategy.Id, pe.RowId)
+			if err := p.HD.Services.AssignToPeer(strategy.Id, pe.RowId); err != nil {
+				p.HD.Logger.Warnf("AssignToPeer fail: strategy=%d peer=%d %v", strategy.Id, pe.RowId, err)
+			}
 		}
 	}
 
 	// Handle preset-device-group-name: auto-assign device group
 	if f.PresetDeviceGroupName != "" && pe.GroupId == 0 {
-		allGroups := p.HD.Services.GroupService.DeviceGroupList(1, 999, nil)
+		allGroups := p.HD.Services.DeviceGroupList(1, 999, nil)
 		for _, g := range allGroups.DeviceGroups {
 			if g.Name == f.PresetDeviceGroupName {
 				pe.GroupId = g.Id
-				p.HD.Services.PeerService.Update(&model.Peer{RowId: pe.RowId, GroupId: g.Id})
+				if err := p.HD.Services.PeerService.Update(&model.Peer{RowId: pe.RowId, GroupId: g.Id}); err != nil {
+					p.HD.Logger.Warnf("assign device group fail: peer=%d group=%d %v", pe.RowId, g.Id, err)
+				}
 				break
 			}
 		}
@@ -77,9 +81,11 @@ func (p *Peer) SysInfo(c *gin.Context) {
 
 	// Handle preset-username: auto-assign user
 	if f.PresetUsername != "" && pe.UserId == 0 {
-		u := p.HD.Services.UserService.InfoByUsername(f.PresetUsername)
+		u := p.HD.Services.InfoByUsername(f.PresetUsername)
 		if u != nil && u.Id != 0 {
-			p.HD.Services.PeerService.Update(&model.Peer{RowId: pe.RowId, UserId: u.Id})
+			if err := p.HD.Services.PeerService.Update(&model.Peer{RowId: pe.RowId, UserId: u.Id}); err != nil {
+				p.HD.Logger.Warnf("assign peer user fail: peer=%d user=%d %v", pe.RowId, u.Id, err)
+			}
 		}
 	}
 
@@ -100,8 +106,8 @@ func (p *Peer) SysInfo(c *gin.Context) {
 // @Router /sysinfo_ver [post]
 func (p *Peer) SysInfoVer(c *gin.Context) {
 	//读取resources/version文件
-	v := p.HD.Services.AppService.GetAppVersion()
+	v := p.HD.Services.GetAppVersion()
 	// 加上启动时间，方便client上传信息
-	v = fmt.Sprintf("%s\n%s", v, p.HD.Services.AppService.GetStartTime())
+	v = fmt.Sprintf("%s\n%s", v, p.HD.Services.GetStartTime())
 	c.String(http.StatusOK, v)
 }

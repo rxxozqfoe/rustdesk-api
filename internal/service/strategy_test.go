@@ -133,7 +133,9 @@ func TestInfoById(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "find-me"}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	found := ss.InfoById(s.Id)
 	if found.Name != "find-me" {
@@ -156,7 +158,9 @@ func TestInfoByGuid(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "guid-test"}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	found := ss.InfoByGuid(s.Guid)
 	if found.Id != s.Id {
@@ -169,7 +173,9 @@ func TestInfoByName(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "name-lookup"}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	found := ss.InfoByName("name-lookup")
 	if found.Id != s.Id {
@@ -182,7 +188,9 @@ func TestUpdate(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "original"}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	s.Name = "updated"
 	s.ConfigOptions = makeJSON(map[string]string{"enable-audio": "N"})
@@ -205,7 +213,9 @@ func TestUpdate_DisableStrategy(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "will-disable", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	loaded := ss.InfoById(s.Id)
 	if loaded.Enabled == nil || !*loaded.Enabled {
@@ -228,7 +238,9 @@ func TestSetEnabled(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "toggle", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.SetEnabled(s.Id, false); err != nil {
 		t.Fatalf("SetEnabled(false) failed: %v", err)
@@ -252,7 +264,9 @@ func TestDelete_RemovesStrategy(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "to-delete"}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.Delete(s); err != nil {
 		t.Fatalf("Delete failed: %v", err)
@@ -269,12 +283,20 @@ func TestDelete_CascadesAssignments(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "cascade-test", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create assignments of all three types
-	ss.AssignToPeer(s.Id, 100)
-	ss.AssignToUser(s.Id, 200)
-	ss.AssignToDeviceGroup(s.Id, 300)
+	if err := ss.AssignToPeer(s.Id, 100); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(s.Id, 200); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToDeviceGroup(s.Id, 300); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.Delete(s); err != nil {
 		t.Fatalf("Delete failed: %v", err)
@@ -297,7 +319,9 @@ func TestList_Pagination(t *testing.T) {
 	ss := newStrategyService(db)
 
 	for i := 0; i < 5; i++ {
-		ss.Create(&model.Strategy{Name: "list-" + string(rune('A'+i))})
+		if err := ss.Create(&model.Strategy{Name: "list-" + string(rune('A'+i))}); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	result := ss.List(1, 2, nil)
@@ -333,10 +357,16 @@ func TestList_WithFilter(t *testing.T) {
 
 	s1 := &model.Strategy{Name: "enabled-one", Enabled: model.BoolPtr(true)}
 	s2 := &model.Strategy{Name: "disabled-one", Enabled: model.BoolPtr(true)}
-	ss.Create(s1)
-	ss.Create(s2)
+	if err := ss.Create(s1); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(s2); err != nil {
+		t.Fatal(err)
+	}
 	// Use SetEnabled to reliably disable (avoids GORM zero-value bug)
-	ss.SetEnabled(s2.Id, false)
+	if err := ss.SetEnabled(s2.Id, false); err != nil {
+		t.Fatal(err)
+	}
 
 	result := ss.List(1, 10, func(tx *gorm.DB) {
 		tx.Where("enabled = ?", true)
@@ -350,9 +380,15 @@ func TestListAll(t *testing.T) {
 	db := setupTestDB(t)
 	ss := newStrategyService(db)
 
-	ss.Create(&model.Strategy{Name: "all-1"})
-	ss.Create(&model.Strategy{Name: "all-2"})
-	ss.Create(&model.Strategy{Name: "all-3"})
+	if err := ss.Create(&model.Strategy{Name: "all-1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(&model.Strategy{Name: "all-2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(&model.Strategy{Name: "all-3"}); err != nil {
+		t.Fatal(err)
+	}
 
 	all := ss.ListAll()
 	if len(all) != 3 {
@@ -367,7 +403,9 @@ func TestDelete_ErrorOnPeerTable(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "del-err-peer", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	// Drop strategy_peers table to force error on first delete
 	db.Exec("DROP TABLE strategy_peers")
@@ -389,7 +427,9 @@ func TestDelete_ErrorOnUserTable(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "del-err-user", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	// Drop strategy_users table to force error on second delete
 	db.Exec("DROP TABLE strategy_users")
@@ -405,7 +445,9 @@ func TestDelete_ErrorOnDeviceGroupTable(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "del-err-dg", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	// Drop strategy_device_groups table to force error on third delete
 	db.Exec("DROP TABLE strategy_device_groups")
@@ -423,7 +465,9 @@ func TestAssignToPeer(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "peer-assign"}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.AssignToPeer(s.Id, 10); err != nil {
 		t.Fatalf("AssignToPeer failed: %v", err)
@@ -444,12 +488,20 @@ func TestAssignToPeer_ReplacesOld(t *testing.T) {
 
 	s1 := &model.Strategy{Name: "old-strategy"}
 	s2 := &model.Strategy{Name: "new-strategy"}
-	ss.Create(s1)
-	ss.Create(s2)
+	if err := ss.Create(s1); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(s2); err != nil {
+		t.Fatal(err)
+	}
 
 	// Assign peer 10 to strategy 1, then reassign to strategy 2
-	ss.AssignToPeer(s1.Id, 10)
-	ss.AssignToPeer(s2.Id, 10)
+	if err := ss.AssignToPeer(s1.Id, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToPeer(s2.Id, 10); err != nil {
+		t.Fatal(err)
+	}
 
 	// Old strategy should have no peer assignments
 	if peers := ss.PeerAssignments(s1.Id); len(peers) != 0 {
@@ -470,8 +522,12 @@ func TestAssignToUser(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "user-assign"}
-	ss.Create(s)
-	ss.AssignToUser(s.Id, 20)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(s.Id, 20); err != nil {
+		t.Fatal(err)
+	}
 
 	assignments := ss.UserAssignments(s.Id)
 	if len(assignments) != 1 || assignments[0].UserId != 20 {
@@ -485,11 +541,19 @@ func TestAssignToUser_ReplacesOld(t *testing.T) {
 
 	s1 := &model.Strategy{Name: "old-user"}
 	s2 := &model.Strategy{Name: "new-user"}
-	ss.Create(s1)
-	ss.Create(s2)
+	if err := ss.Create(s1); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(s2); err != nil {
+		t.Fatal(err)
+	}
 
-	ss.AssignToUser(s1.Id, 20)
-	ss.AssignToUser(s2.Id, 20)
+	if err := ss.AssignToUser(s1.Id, 20); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(s2.Id, 20); err != nil {
+		t.Fatal(err)
+	}
 
 	if users := ss.UserAssignments(s1.Id); len(users) != 0 {
 		t.Errorf("old strategy should have 0 user assignments, got %d", len(users))
@@ -505,8 +569,12 @@ func TestAssignToDeviceGroup(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "dg-assign"}
-	ss.Create(s)
-	ss.AssignToDeviceGroup(s.Id, 30)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToDeviceGroup(s.Id, 30); err != nil {
+		t.Fatal(err)
+	}
 
 	assignments := ss.DeviceGroupAssignments(s.Id)
 	if len(assignments) != 1 || assignments[0].DeviceGroupId != 30 {
@@ -520,11 +588,19 @@ func TestAssignToDeviceGroup_ReplacesOld(t *testing.T) {
 
 	s1 := &model.Strategy{Name: "old-dg"}
 	s2 := &model.Strategy{Name: "new-dg"}
-	ss.Create(s1)
-	ss.Create(s2)
+	if err := ss.Create(s1); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(s2); err != nil {
+		t.Fatal(err)
+	}
 
-	ss.AssignToDeviceGroup(s1.Id, 30)
-	ss.AssignToDeviceGroup(s2.Id, 30)
+	if err := ss.AssignToDeviceGroup(s1.Id, 30); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToDeviceGroup(s2.Id, 30); err != nil {
+		t.Fatal(err)
+	}
 
 	if dgs := ss.DeviceGroupAssignments(s1.Id); len(dgs) != 0 {
 		t.Errorf("old strategy should have 0 dg assignments, got %d", len(dgs))
@@ -540,8 +616,12 @@ func TestUnassignPeer(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "unassign-peer"}
-	ss.Create(s)
-	ss.AssignToPeer(s.Id, 10)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToPeer(s.Id, 10); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.UnassignPeer(10); err != nil {
 		t.Fatalf("UnassignPeer failed: %v", err)
@@ -556,8 +636,12 @@ func TestUnassignUser(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "unassign-user"}
-	ss.Create(s)
-	ss.AssignToUser(s.Id, 20)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(s.Id, 20); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.UnassignUser(20); err != nil {
 		t.Fatalf("UnassignUser failed: %v", err)
@@ -572,8 +656,12 @@ func TestUnassignDeviceGroup(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "unassign-dg"}
-	ss.Create(s)
-	ss.AssignToDeviceGroup(s.Id, 30)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToDeviceGroup(s.Id, 30); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ss.UnassignDeviceGroup(30); err != nil {
 		t.Fatalf("UnassignDeviceGroup failed: %v", err)
@@ -590,11 +678,15 @@ func TestResolveForPeer_DirectPeerAssignment(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "peer-direct", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-1", UserId: 0, GroupId: 0}
 	db.Create(peer)
-	ss.AssignToPeer(s.Id, peer.RowId)
+	if err := ss.AssignToPeer(s.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
 
 	resolved := ss.ResolveForPeer(peer)
 	if resolved == nil {
@@ -610,11 +702,15 @@ func TestResolveForPeer_UserAssignment(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "user-level", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-2", UserId: 50, GroupId: 0}
 	db.Create(peer)
-	ss.AssignToUser(s.Id, 50)
+	if err := ss.AssignToUser(s.Id, 50); err != nil {
+		t.Fatal(err)
+	}
 
 	resolved := ss.ResolveForPeer(peer)
 	if resolved == nil {
@@ -630,11 +726,15 @@ func TestResolveForPeer_DeviceGroupAssignment(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "group-level", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-3", UserId: 0, GroupId: 70}
 	db.Create(peer)
-	ss.AssignToDeviceGroup(s.Id, 70)
+	if err := ss.AssignToDeviceGroup(s.Id, 70); err != nil {
+		t.Fatal(err)
+	}
 
 	resolved := ss.ResolveForPeer(peer)
 	if resolved == nil {
@@ -653,17 +753,29 @@ func TestResolveForPeer_PriorityOrder(t *testing.T) {
 	sPeer := &model.Strategy{Name: "priority-peer", Enabled: model.BoolPtr(true)}
 	sUser := &model.Strategy{Name: "priority-user", Enabled: model.BoolPtr(true)}
 	sGroup := &model.Strategy{Name: "priority-group", Enabled: model.BoolPtr(true)}
-	ss.Create(sPeer)
-	ss.Create(sUser)
-	ss.Create(sGroup)
+	if err := ss.Create(sPeer); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(sUser); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(sGroup); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-prio", UserId: 50, GroupId: 70}
 	db.Create(peer)
 
 	// Assign all three levels
-	ss.AssignToPeer(sPeer.Id, peer.RowId)
-	ss.AssignToUser(sUser.Id, 50)
-	ss.AssignToDeviceGroup(sGroup.Id, 70)
+	if err := ss.AssignToPeer(sPeer.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(sUser.Id, 50); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToDeviceGroup(sGroup.Id, 70); err != nil {
+		t.Fatal(err)
+	}
 
 	// Should pick peer-level (highest priority)
 	resolved := ss.ResolveForPeer(peer)
@@ -676,7 +788,9 @@ func TestResolveForPeer_PriorityOrder(t *testing.T) {
 	}
 
 	// Remove peer assignment → should fall through to user-level
-	ss.UnassignPeer(peer.RowId)
+	if err := ss.UnassignPeer(peer.RowId); err != nil {
+		t.Fatal(err)
+	}
 	resolved = ss.ResolveForPeer(peer)
 	if resolved == nil {
 		t.Fatal("ResolveForPeer returned nil after removing peer assignment")
@@ -687,7 +801,9 @@ func TestResolveForPeer_PriorityOrder(t *testing.T) {
 	}
 
 	// Remove user assignment → should fall through to device group
-	ss.UnassignUser(50)
+	if err := ss.UnassignUser(50); err != nil {
+		t.Fatal(err)
+	}
 	resolved = ss.ResolveForPeer(peer)
 	if resolved == nil {
 		t.Fatal("ResolveForPeer returned nil after removing user assignment")
@@ -698,7 +814,9 @@ func TestResolveForPeer_PriorityOrder(t *testing.T) {
 	}
 
 	// Remove group assignment → should return nil
-	ss.UnassignDeviceGroup(70)
+	if err := ss.UnassignDeviceGroup(70); err != nil {
+		t.Fatal(err)
+	}
 	resolved = ss.ResolveForPeer(peer)
 	if resolved != nil {
 		t.Errorf("expected nil after removing all assignments, got Id=%d", resolved.Id)
@@ -711,14 +829,20 @@ func TestResolveForPeer_SkipsDisabledStrategy(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "disabled", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-disabled", UserId: 0, GroupId: 0}
 	db.Create(peer)
-	ss.AssignToPeer(s.Id, peer.RowId)
+	if err := ss.AssignToPeer(s.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
 
 	// Disable the strategy
-	ss.SetEnabled(s.Id, false)
+	if err := ss.SetEnabled(s.Id, false); err != nil {
+		t.Fatal(err)
+	}
 
 	resolved := ss.ResolveForPeer(peer)
 	if resolved != nil {
@@ -733,17 +857,27 @@ func TestResolveForPeer_FallsThroughDisabledPeerToUser(t *testing.T) {
 
 	sPeer := &model.Strategy{Name: "disabled-peer", Enabled: model.BoolPtr(true)}
 	sUser := &model.Strategy{Name: "enabled-user", Enabled: model.BoolPtr(true)}
-	ss.Create(sPeer)
-	ss.Create(sUser)
+	if err := ss.Create(sPeer); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(sUser); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-fallthrough", UserId: 50, GroupId: 0}
 	db.Create(peer)
 
-	ss.AssignToPeer(sPeer.Id, peer.RowId)
-	ss.AssignToUser(sUser.Id, 50)
+	if err := ss.AssignToPeer(sPeer.Id, peer.RowId); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(sUser.Id, 50); err != nil {
+		t.Fatal(err)
+	}
 
 	// Disable peer-level strategy
-	ss.SetEnabled(sPeer.Id, false)
+	if err := ss.SetEnabled(sPeer.Id, false); err != nil {
+		t.Fatal(err)
+	}
 
 	resolved := ss.ResolveForPeer(peer)
 	if resolved == nil {
@@ -775,8 +909,12 @@ func TestResolveForPeer_SkipsUserWhenNoUserId(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "user-only", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
-	ss.AssignToUser(s.Id, 50)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(s.Id, 50); err != nil {
+		t.Fatal(err)
+	}
 
 	// Peer has no user association
 	peer := &model.Peer{Id: "peer-no-user", UserId: 0, GroupId: 0}
@@ -794,8 +932,12 @@ func TestResolveForPeer_SkipsGroupWhenNoGroupId(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "group-only", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
-	ss.AssignToDeviceGroup(s.Id, 70)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToDeviceGroup(s.Id, 70); err != nil {
+		t.Fatal(err)
+	}
 
 	peer := &model.Peer{Id: "peer-no-group", UserId: 0, GroupId: 0}
 	db.Create(peer)
@@ -822,7 +964,9 @@ func TestConfigOptionsMap(t *testing.T) {
 		Name:          "json-test",
 		ConfigOptions: makeJSON(opts),
 	}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	loaded := ss.InfoById(s.Id)
 	got := ss.ConfigOptionsMap(loaded)
@@ -842,7 +986,9 @@ func TestExtraMap(t *testing.T) {
 		Name:  "extra-test",
 		Extra: makeJSON(extra),
 	}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	loaded := ss.InfoById(s.Id)
 	got := ss.ExtraMap(loaded)
@@ -900,11 +1046,19 @@ func TestMultiplePeersAssignedToSameStrategy(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "multi-peer", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
-	ss.AssignToPeer(s.Id, 10)
-	ss.AssignToPeer(s.Id, 20)
-	ss.AssignToPeer(s.Id, 30)
+	if err := ss.AssignToPeer(s.Id, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToPeer(s.Id, 20); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToPeer(s.Id, 30); err != nil {
+		t.Fatal(err)
+	}
 
 	peers := ss.PeerAssignments(s.Id)
 	if len(peers) != 3 {
@@ -917,10 +1071,16 @@ func TestMultipleUsersAssignedToSameStrategy(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "multi-user", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
-	ss.AssignToUser(s.Id, 10)
-	ss.AssignToUser(s.Id, 20)
+	if err := ss.AssignToUser(s.Id, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToUser(s.Id, 20); err != nil {
+		t.Fatal(err)
+	}
 
 	users := ss.UserAssignments(s.Id)
 	if len(users) != 2 {
@@ -939,12 +1099,20 @@ func TestAssignToPeer_TransactionIntegrity(t *testing.T) {
 
 	s1 := &model.Strategy{Name: "txn-1", Enabled: model.BoolPtr(true)}
 	s2 := &model.Strategy{Name: "txn-2", Enabled: model.BoolPtr(true)}
-	ss.Create(s1)
-	ss.Create(s2)
+	if err := ss.Create(s1); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.Create(s2); err != nil {
+		t.Fatal(err)
+	}
 
 	// Assign, then reassign — verify exactly one record exists
-	ss.AssignToPeer(s1.Id, 10)
-	ss.AssignToPeer(s2.Id, 10)
+	if err := ss.AssignToPeer(s1.Id, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := ss.AssignToPeer(s2.Id, 10); err != nil {
+		t.Fatal(err)
+	}
 
 	var count int64
 	db.Model(&model.StrategyPeer{}).Where("peer_row_id = ?", 10).Count(&count)

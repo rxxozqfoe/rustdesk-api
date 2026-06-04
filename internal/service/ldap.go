@@ -106,7 +106,7 @@ func (ls *LdapService) connectAndBind(cfg *config.Ldap, username, password strin
 	// Bind as the "service" user
 	if err = conn.Bind(username, password); err != nil {
 		fmt.Println("Bind failed")
-		conn.Close()
+		_ = conn.Close()
 		return nil, errors.Join(ErrLdapBindService, err)
 	}
 	return conn, nil
@@ -123,7 +123,7 @@ func (ls *LdapService) verifyCredentials(cfg *config.Ldap, username, password st
 	if err != nil {
 		return ErrLdapPasswordNotMatch
 	}
-	defer ldapConn.Close()
+	defer func() { _ = ldapConn.Close() }()
 	return nil
 }
 
@@ -337,7 +337,7 @@ func (ls *LdapService) searchResult(cfg *config.Ldap, searchRequest *ldap.Search
 	if err != nil {
 		return nil, err
 	}
-	defer ldapConn.Close()
+	defer func() { _ = ldapConn.Close() }()
 	return ldapConn.Search(searchRequest)
 }
 
@@ -538,27 +538,4 @@ func (ls *LdapService) isUserEnabled(cfg *config.Ldap, ldapUser *LdapUser) bool 
 	// For other attributes, perform a direct comparison with the expected value
 	ldapUser.Enabled = ldapUser.EnableAttrValue == enableAttrValue
 	return ldapUser.Enabled
-}
-
-// getAttrOfDn retrieves the value of an attribute for a given DN.
-func (ls *LdapService) getAttrOfDn(cfg *config.Ldap, dn, attr string) string {
-	searchRequest := ldap.NewSearchRequest(
-		ldap.EscapeFilter(dn),
-		ldap.ScopeBaseObject,
-		ldap.NeverDerefAliases,
-		0,     // unlimited search results
-		0,     // no server-side time limit
-		false, // typesOnly
-		"(objectClass=*)",
-		[]string{attr},
-		nil,
-	)
-	sr, err := ls.searchResult(cfg, searchRequest)
-	if err != nil {
-		return ""
-	}
-	if len(sr.Entries) == 0 {
-		return ""
-	}
-	return sr.Entries[0].GetAttributeValue(attr)
 }

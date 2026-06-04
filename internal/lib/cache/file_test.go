@@ -27,10 +27,11 @@ func TestFileGet(t *testing.T) {
 }
 func TestFileSetGet(t *testing.T) {
 	fc := NewFileCache()
-	err := fc.Set("key1", "ddd", 0)
+	if err := fc.Set("key1", "ddd", 0); err != nil {
+		t.Fatalf("写入失败%v", err)
+	}
 	res := ""
-	err = fc.Get("key1", &res)
-	if err != nil {
+	if err := fc.Get("key1", &res); err != nil {
 		fmt.Println(err.Error())
 		t.Fatalf("读取失败")
 	}
@@ -41,12 +42,14 @@ func TestFileGetJson(t *testing.T) {
 	old := &r{
 		A: "a", B: "b",
 	}
-	fc.Set("123", old, 0)
+	if err := fc.Set("123", old, 0); err != nil {
+		t.Fatalf("写入失败%v", err)
+	}
 	res := &r{}
 	err2 := fc.Get("123", res)
 	fmt.Println("res", res)
 	if err2 != nil {
-		t.Fatalf("读取失败" + err2.Error())
+		t.Fatalf("读取失败%v", err2)
 	}
 }
 func TestFileSetGetJson(t *testing.T) {
@@ -68,7 +71,7 @@ func TestFileSetGetJson(t *testing.T) {
 	err2 := fc.Get("123", res)
 	fmt.Println("res", res)
 	if err2 != nil {
-		t.Fatalf("读取失败" + err2.Error())
+		t.Fatalf("读取失败%v", err2)
 	}
 	if !reflect.DeepEqual(res, old) {
 		t.Fatalf("读取错误")
@@ -80,7 +83,9 @@ func BenchmarkSet(b *testing.B) {
 	fc := NewFileCache()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		fc.Set("123", "{dsv}", 1000)
+		if err := fc.Set("123", "{dsv}", 1000); err != nil {
+			b.Fatalf("写入失败%v", err)
+		}
 	}
 }
 
@@ -89,6 +94,8 @@ func BenchmarkGet(b *testing.B) {
 	b.ResetTimer()
 	v := ""
 	for i := 0; i < b.N; i++ {
-		fc.Get("123", &v)
+		if err := fc.Get("123", &v); err != nil {
+			b.Fatalf("读取失败%v", err)
+		}
 	}
 }

@@ -56,7 +56,7 @@ func (l *Login) Login(c *gin.Context) {
 		return
 	}
 
-	u := l.HD.Services.UserService.InfoByUsernamePassword(f.Username, f.Password)
+	u := l.HD.Services.InfoByUsernamePassword(f.Username, f.Password)
 
 	if u.Id == 0 {
 		loginLimiter.RecordFailedAttempt(clientIp)
@@ -65,7 +65,7 @@ func (l *Login) Login(c *gin.Context) {
 		return
 	}
 
-	if !l.HD.Services.UserService.CheckUserEnable(u) {
+	if !l.HD.Services.CheckUserEnable(u) {
 		response.Error(c, response.TranslateMsg(c, "UserDisabled"))
 		return
 	}
@@ -76,7 +76,7 @@ func (l *Login) Login(c *gin.Context) {
 		f.DeviceInfo.Type = model.LoginLogClientWeb
 	}
 
-	ut := l.HD.Services.UserService.Login(u, &model.LoginLog{
+	ut := l.HD.Services.Login(u, &model.LoginLog{
 		UserId:   u.Id,
 		Client:   f.DeviceInfo.Type,
 		DeviceId: f.Id,
@@ -103,7 +103,7 @@ func (l *Login) Login(c *gin.Context) {
 // @Failure 500 {object} response.ErrorResponse
 // @Router /login-options [get]
 func (l *Login) LoginOptions(c *gin.Context) {
-	ops := l.HD.Services.OauthService.GetOauthProviders()
+	ops := l.HD.Services.GetOauthProviders()
 	if l.HD.Config.App.WebSso {
 		ops = append(ops, model.OauthTypeWebauth)
 	}
@@ -137,7 +137,9 @@ func (l *Login) Logout(c *gin.Context) {
 	u := helper.CurUser(c)
 	token, ok := c.Get("token")
 	if ok {
-		l.HD.Services.UserService.Logout(u, token.(string))
+		if err := l.HD.Services.Logout(u, token.(string)); err != nil {
+			l.HD.Logger.Warn(fmt.Sprintf("Logout Fail: %s %v", u.Username, err))
+		}
 	}
 	c.JSON(http.StatusOK, nil)
 

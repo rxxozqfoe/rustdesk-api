@@ -26,7 +26,9 @@ func NewI18n(cfg *config.Config) LocalizerFunc {
 		if fileInfo.IsDir() || fileInfo.Name()[len(fileInfo.Name())-5:] != ".toml" {
 			continue
 		}
-		bundle.LoadMessageFile(cfg.Gin.ResourcesPath + "/i18n/" + fileInfo.Name())
+		if _, err := bundle.LoadMessageFile(cfg.Gin.ResourcesPath + "/i18n/" + fileInfo.Name()); err != nil {
+			panic(err)
+		}
 	}
 	return func(lang string) *i18n.Localizer {
 		if lang == "" {

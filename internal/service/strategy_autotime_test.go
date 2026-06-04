@@ -16,7 +16,9 @@ func TestAutoTime_RoundTrip(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "time-test", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	loaded := ss.InfoById(s.Id)
 	updatedAt := time.Time(loaded.UpdatedAt)
@@ -42,7 +44,9 @@ func TestHeartbeat_ModifiedAtConversion(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "heartbeat-ts", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	loaded := ss.InfoById(s.Id)
 	serverModifiedAt := time.Time(loaded.UpdatedAt).Unix()
@@ -60,7 +64,9 @@ func TestHeartbeat_ModifiedAtConversion(t *testing.T) {
 
 	// Admin updates the strategy
 	loaded.ConfigOptions = makeJSON(map[string]string{"enable-audio": "N"})
-	ss.Update(loaded)
+	if err := ss.Update(loaded); err != nil {
+		t.Fatal(err)
+	}
 
 	reloaded := ss.InfoById(s.Id)
 	newServerModifiedAt := time.Time(reloaded.UpdatedAt).Unix()
@@ -81,7 +87,9 @@ func TestAutoTime_UpdateChangesTimestamp(t *testing.T) {
 	ss := newStrategyService(db)
 
 	s := &model.Strategy{Name: "ts-change", Enabled: model.BoolPtr(true)}
-	ss.Create(s)
+	if err := ss.Create(s); err != nil {
+		t.Fatal(err)
+	}
 
 	loaded := ss.InfoById(s.Id)
 	originalTs := time.Time(loaded.UpdatedAt)
@@ -90,7 +98,9 @@ func TestAutoTime_UpdateChangesTimestamp(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond)
 
 	loaded.Name = "ts-changed"
-	ss.Update(loaded)
+	if err := ss.Update(loaded); err != nil {
+		t.Fatal(err)
+	}
 
 	reloaded := ss.InfoById(s.Id)
 	newTs := time.Time(reloaded.UpdatedAt)

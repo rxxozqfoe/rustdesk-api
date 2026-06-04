@@ -27,13 +27,12 @@ type DeviceGroup struct {
 func (ct *DeviceGroup) Detail(c *gin.Context) {
 	id := c.Param("id")
 	iid, _ := strconv.Atoi(id)
-	u := ct.HD.Services.GroupService.DeviceGroupInfoById(uint(iid))
+	u := ct.HD.Services.DeviceGroupInfoById(uint(iid))
 	if u.Id > 0 {
 		response.Success(c, u)
 		return
 	}
 	response.Fail(c, 101, response.TranslateMsg(c, "ItemNotFound"))
-	return
 }
 
 // Create 创建设备群组
@@ -59,7 +58,7 @@ func (ct *DeviceGroup) Create(c *gin.Context) {
 		return
 	}
 	u := f.ToDeviceGroup()
-	err := ct.HD.Services.GroupService.DeviceGroupCreate(u)
+	err := ct.HD.Services.DeviceGroupCreate(u)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -85,7 +84,7 @@ func (ct *DeviceGroup) List(c *gin.Context) {
 		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError")+err.Error())
 		return
 	}
-	res := ct.HD.Services.GroupService.DeviceGroupList(query.Page, query.PageSize, nil)
+	res := ct.HD.Services.DeviceGroupList(query.Page, query.PageSize, nil)
 	response.Success(c, res)
 }
 
@@ -116,7 +115,7 @@ func (ct *DeviceGroup) Update(c *gin.Context) {
 		return
 	}
 	u := f.ToDeviceGroup()
-	err := ct.HD.Services.GroupService.DeviceGroupUpdate(u)
+	err := ct.HD.Services.DeviceGroupUpdate(u)
 	if err != nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OperationFailed")+err.Error())
 		return
@@ -147,9 +146,9 @@ func (ct *DeviceGroup) Delete(c *gin.Context) {
 		response.Fail(c, 101, errList[0])
 		return
 	}
-	u := ct.HD.Services.GroupService.DeviceGroupInfoById(f.Id)
+	u := ct.HD.Services.DeviceGroupInfoById(f.Id)
 	if u.Id > 0 {
-		err := ct.HD.Services.GroupService.DeviceGroupDelete(u)
+		err := ct.HD.Services.DeviceGroupDelete(u)
 		if err == nil {
 			response.Success(c, nil)
 			return
