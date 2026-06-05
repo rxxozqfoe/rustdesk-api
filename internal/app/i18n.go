@@ -2,7 +2,7 @@ package app
 
 import (
 	"github.com/BurntSushi/toml"
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 	"os"

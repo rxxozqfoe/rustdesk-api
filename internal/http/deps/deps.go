@@ -6,13 +6,13 @@
 package deps
 
 import (
-	"github.com/lejianwen/rustdesk-api/v2/internal/app"
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/s3"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/upload"
-	"github.com/lejianwen/rustdesk-api/v2/internal/service"
-	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
+	"github.com/rxxozqfoe/rustdesk-api/internal/app"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/logger"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/s3"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/upload"
+	"github.com/rxxozqfoe/rustdesk-api/internal/service"
+	"github.com/rxxozqfoe/rustdesk-api/internal/utils"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 

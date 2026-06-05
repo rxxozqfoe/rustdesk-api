@@ -1,6 +1,6 @@
 package admin
 
-import "github.com/lejianwen/rustdesk-api/v2/internal/model"
+import "github.com/rxxozqfoe/rustdesk-api/internal/model"
 
 type PeerForm struct {
 	RowId    uint   `json:"row_id" `

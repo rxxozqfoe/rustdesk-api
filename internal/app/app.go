@@ -5,9 +5,9 @@ import (
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-redis/redis/v8"
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/cache"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/cache"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/logger"
 	"github.com/spf13/viper"
 )
 

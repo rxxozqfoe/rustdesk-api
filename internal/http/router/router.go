@@ -2,8 +2,8 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/controller/web"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/controller/web"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
 )
 
 // WebInit registers web-UI static routes. It takes the shared HandlerDeps so

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/middleware"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/router"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/middleware"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/router"
 )
 
 // ApiInit builds the gin engine and registers all routes. It takes the shared

@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/helper"
-	requstform "github.com/lejianwen/rustdesk-api/v2/internal/http/request/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
-	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/helper"
+	requstform "github.com/rxxozqfoe/rustdesk-api/internal/http/request/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/utils"
 )
 
 type Ab struct {
