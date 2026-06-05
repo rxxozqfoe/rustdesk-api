@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
 )
 
 // Client wraps minio-go to provide S3-compatible storage operations.

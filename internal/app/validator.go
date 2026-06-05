@@ -18,7 +18,7 @@ import (
 	ru_translations "github.com/go-playground/validator/v10/translations/ru"
 	zh_translations "github.com/go-playground/validator/v10/translations/zh"
 	zh_tw_translations "github.com/go-playground/validator/v10/translations/zh_tw"
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
 	"reflect"
 )
 

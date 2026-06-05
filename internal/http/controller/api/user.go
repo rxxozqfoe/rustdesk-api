@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/helper"
-	apiResp "github.com/lejianwen/rustdesk-api/v2/internal/http/response/api"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/helper"
+	apiResp "github.com/rxxozqfoe/rustdesk-api/internal/http/response/api"
 )
 
 type User struct {

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	requstform "github.com/lejianwen/rustdesk-api/v2/internal/http/request/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	requstform "github.com/rxxozqfoe/rustdesk-api/internal/http/request/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 )
 
 type Index struct {

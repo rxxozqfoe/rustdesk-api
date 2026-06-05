@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
-	"github.com/lejianwen/rustdesk-api/v2/internal/service"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/service"
 )
 
 // RustAuth builds the RustDesk PC-client auth middleware. It validates the

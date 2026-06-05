@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
-	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/lock"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/utils"
 	"gorm.io/gorm"
 )
 

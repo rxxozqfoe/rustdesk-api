@@ -2,10 +2,10 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/request/admin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/request/admin"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 	"gorm.io/gorm"
 )
 

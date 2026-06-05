@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/lejianwen/rustdesk-api/v2/internal/model/custom_types"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model/custom_types"
 )
 
 type WorkerPlatform struct {

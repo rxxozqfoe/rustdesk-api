@@ -4,11 +4,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/helper"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/request/admin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/service"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/helper"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/request/admin"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/service"
 )
 
 type Oauth struct {
