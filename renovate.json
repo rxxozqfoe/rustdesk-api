@@ -1,8 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
 
-  "$comment": "Mend-curated config:best-practices baseline pulls in docker:pinDigests, helpers:pinGitHubActionDigests, :pinDevDependencies and abandonments:recommended. The three explicit presets below add the Dependency Dashboard issue, semantic-commit PR titles, and override the action-digest pin comment to a precise semver (# v4.2.3) instead of a floating tag.",
-
+  // Mend-curated config:best-practices baseline pulls in docker:pinDigests,
+  // helpers:pinGitHubActionDigests, :pinDevDependencies and
+  // abandonments:recommended. The three explicit presets below add the
+  // Dependency Dashboard issue, semantic-commit PR titles, and override the
+  // action-digest pin comment to a precise semver (# v4.2.3) instead of a
+  // floating tag.
   "extends": [
     "config:best-practices",
     ":dependencyDashboard",
