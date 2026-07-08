@@ -15,3 +15,11 @@ type DeviceCliForm struct {
 	DeviceUsername      string `json:"device_username,omitempty"`
 	DeviceName          string `json:"device_name,omitempty"`
 }
+
+// DeviceDeployForm is the body of POST /api/devices/deploy, sent by
+// `rustdesk --deploy` (RustDesk 1.4.9+).
+type DeviceDeployForm struct {
+	Id   string `json:"id"`
+	Uuid string `json:"uuid"`
+	Pk   string `json:"pk"`
+}

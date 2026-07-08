@@ -36,6 +36,9 @@ func (a *Audit) AuditConn(c *gin.Context) {
 	c.ShouldBindBodyWith(ttt, binding.JSON)
 	fmt.Println(ttt)*/
 	ac := af.ToAuditConn()
+	// Resolve the controller-user attribution token (RustDesk 1.4.9+) into a
+	// concrete user, if the rendezvous server recorded a snapshot for it.
+	a.resolveController(ac)
 	switch af.Action {
 	case model.AuditActionNew:
 		if err := a.HD.Services.CreateAuditConn(ac); err != nil {
@@ -58,6 +61,14 @@ func (a *Audit) AuditConn(c *gin.Context) {
 				FromName:  ac.FromName,
 				SessionId: ac.SessionId,
 				Type:      ac.Type,
+				// Auth details / controller attribution may arrive with the on_open
+				// update rather than the initial record. GORM Updates skips zero
+				// values, so these only overwrite when actually provided.
+				PrimaryAuth:        ac.PrimaryAuth,
+				TwoFactor:          ac.TwoFactor,
+				ConnAuditRef:       ac.ConnAuditRef,
+				ControllerUserId:   ac.ControllerUserId,
+				ControllerUsername: ac.ControllerUsername,
 			}
 			if err := a.HD.Services.UpdateAuditConn(up); err != nil {
 				a.HD.Logger.Warnf("UpdateAuditConn fail: %v", err)
@@ -65,6 +76,20 @@ func (a *Audit) AuditConn(c *gin.Context) {
 		}
 	}
 	response.Success(c, "")
+}
+
+// resolveController fills ControllerUserId/ControllerUsername from the
+// conn_audit_ref snapshot written by the rendezvous server, when present.
+func (a *Audit) resolveController(ac *model.AuditConn) {
+	if ac.ConnAuditRef == "" {
+		return
+	}
+	snap := a.HD.Services.ConnAuditRefService.Lookup(ac.ConnAuditRef)
+	if snap == nil {
+		return
+	}
+	ac.ControllerUserId = snap.UserId
+	ac.ControllerUsername = snap.Username
 }
 
 // AuditFile

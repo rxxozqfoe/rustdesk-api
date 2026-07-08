@@ -16,7 +16,18 @@ type AuditConn struct {
 	SessionId string `json:"session_id" gorm:"default:'';not null;"`
 	Type      int    `json:"type" gorm:"default:0;not null;"`
 	Uuid      string `json:"uuid" gorm:"default:'';not null;"`
-	CloseTime int64  `json:"close_time" gorm:"default:0;not null;"`
+	// PrimaryAuth records the controller's primary authentication method (RustDesk 1.4.9+).
+	// 0=None 1=Click 2=TemporaryPassword 3=PermanentPassword 4=SwitchSides
+	PrimaryAuth int `json:"primary_auth" gorm:"default:0;not null;"`
+	// TwoFactor records the controller's two-factor method (RustDesk 1.4.9+).
+	// 0=None 1=TOTP 2=TrustedDevice
+	TwoFactor int `json:"two_factor" gorm:"default:0;not null;"`
+	// ConnAuditRef is the controller-user attribution token echoed by the controlled
+	// client (RustDesk 1.4.9+). It is resolved against ConnAuditRef snapshots below.
+	ConnAuditRef       string `json:"conn_audit_ref" gorm:"default:'';not null;"`
+	ControllerUserId   uint   `json:"controller_user_id" gorm:"default:0;not null;index"`
+	ControllerUsername string `json:"controller_username" gorm:"default:'';not null;"`
+	CloseTime          int64  `json:"close_time" gorm:"default:0;not null;"`
 	TimeModel
 }
 

@@ -17,6 +17,9 @@ type Peer struct {
 	GroupId        uint   `json:"group_id"  gorm:"default:0;not null;index"`
 	Alias          string `json:"alias" gorm:"default:'';not null;index"`
 	Note           string `json:"note" gorm:"default:'';not null;"`
+	// Deployed marks a device as provisioned via `rustdesk --deploy` (RustDesk 1.4.9+).
+	// The rendezvous server may gate RegisterPk on this flag (NOT_DEPLOYED).
+	Deployed bool `json:"deployed" gorm:"default:0;not null;index"`
 	TimeModel
 }
 

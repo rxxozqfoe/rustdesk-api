@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
@@ -135,4 +136,65 @@ func (d *Device) Cli(c *gin.Context) {
 	}
 
 	c.String(http.StatusOK, "")
+}
+
+// Deploy handles `rustdesk --deploy` device provisioning (RustDesk 1.4.9+).
+// It marks the device deployed, binds it to the authenticated user, reuses the
+// presented token for the device, and returns a {"result": ...} verdict the
+// client understands (OK / NOT_ENABLED / INVALID_INPUT / ID_TAKEN).
+// @Tags Device
+// @Summary Device deployment
+// @Description Provision a device via `rustdesk --deploy`
+// @Accept  json
+// @Produce  json
+// @Param body body requstform.DeviceDeployForm true "Device deploy form"
+// @Success 200 {object} map[string]string
+// @Router /devices/deploy [post]
+// @Security BearerAuth
+func (d *Device) Deploy(c *gin.Context) {
+	if !d.HD.Config.Hbbs.DeployEnabled {
+		c.JSON(http.StatusOK, gin.H{"result": "NOT_ENABLED"})
+		return
+	}
+	f := &requstform.DeviceDeployForm{}
+	if err := c.ShouldBindJSON(f); err != nil || f.Id == "" || f.Uuid == "" {
+		c.JSON(http.StatusOK, gin.H{"result": "INVALID_INPUT"})
+		return
+	}
+	curUser := helper.CurUser(c)
+	if curUser == nil || curUser.Id == 0 {
+		c.JSON(http.StatusOK, gin.H{"result": "INVALID_INPUT"})
+		return
+	}
+
+	peer := d.HD.Services.FindById(f.Id)
+	// The same id already claimed by a different machine.
+	if peer != nil && peer.RowId != 0 && peer.Uuid != "" && peer.Uuid != f.Uuid {
+		c.JSON(http.StatusOK, gin.H{"result": "ID_TAKEN"})
+		return
+	}
+
+	if peer == nil || peer.RowId == 0 {
+		peer = &model.Peer{Id: f.Id, Uuid: f.Uuid, UserId: curUser.Id, Deployed: true}
+		if err := d.HD.Services.PeerService.Create(peer); err != nil {
+			d.HD.Logger.Warnf("Deploy create peer fail: %v", err)
+			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
+			return
+		}
+	} else {
+		peer.Uuid = f.Uuid
+		peer.UserId = curUser.Id
+		peer.Deployed = true
+		if err := d.HD.Services.PeerService.Update(peer); err != nil {
+			d.HD.Logger.Warnf("Deploy update peer fail: %v", err)
+			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
+			return
+		}
+	}
+
+	// Reuse the presented access token for this device.
+	token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+	d.HD.Services.BindTokenToDevice(token, f.Uuid, f.Id)
+
+	c.JSON(http.StatusOK, gin.H{"result": "OK"})
 }

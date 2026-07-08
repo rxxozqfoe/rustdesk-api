@@ -28,7 +28,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const DatabaseVersion = 267
+const DatabaseVersion = 268
 
 // @title 管理系统API
 // @version 1.0
@@ -385,6 +385,7 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.BuildArtifact{},
 		&model.PreBuild{},
 		&model.Worker{},
+		&model.ConnAuditRef{},
 	)
 	if err != nil {
 		a.Logger.Error("migrate err :=>", err)
