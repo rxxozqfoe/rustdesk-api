@@ -18,6 +18,8 @@ type AuditConn struct {
 	Uuid      string `json:"uuid" gorm:"default:'';not null;"`
 	// PrimaryAuth records the controller's primary authentication method (RustDesk 1.4.9+).
 	// 0=None 1=Click 2=TemporaryPassword 3=PermanentPassword 4=SwitchSides
+	// NOTE: like from_peer/from_name/ip, this is self-reported by the controlled
+	// client and is not cryptographically verified — treat as advisory.
 	PrimaryAuth int `json:"primary_auth" gorm:"default:0;not null;"`
 	// TwoFactor records the controller's two-factor method (RustDesk 1.4.9+).
 	// 0=None 1=TOTP 2=TrustedDevice

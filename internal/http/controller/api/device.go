@@ -168,25 +168,27 @@ func (d *Device) Deploy(c *gin.Context) {
 	}
 
 	peer := d.HD.Services.FindById(f.Id)
-	// The same id already claimed by a different machine.
-	if peer != nil && peer.RowId != 0 && peer.Uuid != "" && peer.Uuid != f.Uuid {
-		c.JSON(http.StatusOK, gin.H{"result": "ID_TAKEN"})
-		return
-	}
-
-	if peer == nil || peer.RowId == 0 {
-		peer = &model.Peer{Id: f.Id, Uuid: f.Uuid, UserId: curUser.Id, Deployed: true}
-		if err := d.HD.Services.PeerService.Create(peer); err != nil {
-			d.HD.Logger.Warnf("Deploy create peer fail: %v", err)
-			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
+	if peer != nil && peer.RowId != 0 {
+		// Prevent deploy-based peer takeover (IDOR): only the current owner (or
+		// an unowned peer) may (re)deploy an id, and the bound uuid must match.
+		// Reject anything owned by another user or bound to a different device.
+		if (peer.UserId != 0 && peer.UserId != curUser.Id) ||
+			(peer.Uuid != "" && peer.Uuid != f.Uuid) {
+			c.JSON(http.StatusOK, gin.H{"result": "ID_TAKEN"})
 			return
 		}
-	} else {
 		peer.Uuid = f.Uuid
 		peer.UserId = curUser.Id
 		peer.Deployed = true
 		if err := d.HD.Services.PeerService.Update(peer); err != nil {
 			d.HD.Logger.Warnf("Deploy update peer fail: %v", err)
+			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
+			return
+		}
+	} else {
+		peer = &model.Peer{Id: f.Id, Uuid: f.Uuid, UserId: curUser.Id, Deployed: true}
+		if err := d.HD.Services.PeerService.Create(peer); err != nil {
+			d.HD.Logger.Warnf("Deploy create peer fail: %v", err)
 			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
 			return
 		}
