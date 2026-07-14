@@ -93,6 +93,7 @@ func ApiInit(g *gin.Engine, hd *deps.HandlerDeps) {
 	{
 		dev := &api.Device{HD: hd}
 		frg.POST("/devices/cli", dev.Cli)
+		frg.POST("/devices/deploy", dev.Deploy)
 	}
 	{
 		sc := &api.StrategyController{HD: hd}

@@ -166,6 +166,30 @@ func (us *UserService) Create(u *model.User) error {
 	return res
 }
 
+// BindTokenToDevice associates an existing access token with a device so a
+// deployed device reuses the same token (RustDesk 1.4.9+ `--deploy`). It only
+// fills empty binding fields and is a no-op when the token is unknown.
+func (us *UserService) BindTokenToDevice(token, uuid, deviceId string) {
+	if token == "" {
+		return
+	}
+	ut := &model.UserToken{}
+	us.ctx.DB.Where("token = ?", token).First(ut)
+	if ut.Id == 0 {
+		return
+	}
+	updates := map[string]interface{}{}
+	if uuid != "" && ut.DeviceUuid == "" {
+		updates["device_uuid"] = uuid
+	}
+	if deviceId != "" && ut.DeviceId == "" {
+		updates["device_id"] = deviceId
+	}
+	if len(updates) > 0 {
+		us.ctx.DB.Model(ut).Updates(updates)
+	}
+}
+
 // GetUuidByToken 根据token和user取uuid
 func (us *UserService) GetUuidByToken(u *model.User, token string) string {
 	ut := &model.UserToken{}

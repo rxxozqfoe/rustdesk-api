@@ -86,6 +86,11 @@ worker:
   heartbeat-timeout: 15 # seconds before a worker is considered offline
   log-cache-dir: "./data/build-logs" # local cache for in-progress build logs
 
+hbbs:
+  token: "" # shared secret for rendezvous-server (hbbs) internal API (empty = disabled)
+  deploy-enabled: false # gate `rustdesk --deploy` device provisioning + NOT_DEPLOYED
+  conn-audit-ref-ttl: 86400 # lifetime (seconds) of controller-user audit snapshots
+
 ldap:
   enable: false
   url: "ldap://ldap.example.com:389"
