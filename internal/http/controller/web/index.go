@@ -2,7 +2,7 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
 )
 
 type Index struct {

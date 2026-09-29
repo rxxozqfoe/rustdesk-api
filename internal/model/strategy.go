@@ -1,6 +1,6 @@
 package model
 
-import "github.com/lejianwen/rustdesk-api/v2/internal/model/custom_types"
+import "github.com/rxxozqfoe/rustdesk-api/internal/model/custom_types"
 
 // Strategy represents a configuration strategy that can be pushed to devices.
 type Strategy struct {

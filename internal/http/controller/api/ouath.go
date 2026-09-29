@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/request/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	apiResp "github.com/lejianwen/rustdesk-api/v2/internal/http/response/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
-	"github.com/lejianwen/rustdesk-api/v2/internal/service"
-	"github.com/lejianwen/rustdesk-api/v2/internal/utils"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/request/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	apiResp "github.com/rxxozqfoe/rustdesk-api/internal/http/response/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/service"
+	"github.com/rxxozqfoe/rustdesk-api/internal/utils"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 

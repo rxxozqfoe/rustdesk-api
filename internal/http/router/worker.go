@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/controller/worker"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/middleware"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/controller/worker"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/middleware"
 )
 
 // WorkerInit registers the /api/worker/* routes used by the build-worker service.

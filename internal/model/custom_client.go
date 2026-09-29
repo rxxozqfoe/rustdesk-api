@@ -1,6 +1,6 @@
 package model
 
-import "github.com/lejianwen/rustdesk-api/v2/internal/model/custom_types"
+import "github.com/rxxozqfoe/rustdesk-api/internal/model/custom_types"
 
 // CustomClient represents a bundled custom client installer.
 // Each record = one config + one platform/version/format → one downloadable file.

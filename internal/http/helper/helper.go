@@ -2,7 +2,7 @@ package helper
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 )
 
 // UserRouteNames defines accessible route names for regular users.

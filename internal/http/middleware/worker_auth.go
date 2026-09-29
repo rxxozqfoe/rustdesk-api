@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
 )
 
 // WorkerAuth validates the Bearer token from build-worker requests against

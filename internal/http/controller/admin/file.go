@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/upload"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/upload"
 )
 
 type File struct {

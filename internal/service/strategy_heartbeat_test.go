@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 )
 
 // Simulate the exact heartbeat handler logic from index.go:69-82

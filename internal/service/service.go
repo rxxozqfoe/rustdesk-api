@@ -1,12 +1,12 @@
 package service
 
 import (
-	"github.com/lejianwen/rustdesk-api/v2/internal/config"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/jwt"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/lock"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/logger"
-	"github.com/lejianwen/rustdesk-api/v2/internal/lib/s3"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/config"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/jwt"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/lock"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/logger"
+	"github.com/rxxozqfoe/rustdesk-api/internal/lib/s3"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 	"gorm.io/gorm"
 )
 

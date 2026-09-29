@@ -6,12 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/helper"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/request/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	apiResp "github.com/lejianwen/rustdesk-api/v2/internal/http/response/api"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	deps "github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/helper"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/request/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	apiResp "github.com/rxxozqfoe/rustdesk-api/internal/http/response/api"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 )
 
 type Login struct {

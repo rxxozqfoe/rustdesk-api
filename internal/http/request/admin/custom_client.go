@@ -3,8 +3,8 @@ package admin
 import (
 	"encoding/json"
 
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model/custom_types"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model/custom_types"
 )
 
 type CustomClientForm struct {

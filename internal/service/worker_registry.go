@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model/custom_types"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model/custom_types"
 	"gorm.io/gorm"
 )
 

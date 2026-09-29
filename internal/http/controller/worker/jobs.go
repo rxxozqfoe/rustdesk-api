@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
-	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/deps"
+	"github.com/rxxozqfoe/rustdesk-api/internal/http/response"
+	"github.com/rxxozqfoe/rustdesk-api/internal/model"
 )
 
 type Jobs struct {
