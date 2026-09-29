@@ -88,7 +88,7 @@ worker:
 
 hbbs:
   token: "" # shared secret for rendezvous-server (hbbs) internal API (empty = disabled)
-  deploy-enabled: false # gate `rustdesk --deploy` device provisioning + NOT_DEPLOYED
+  deploy-enabled: false # single switch for the deploy gate: enables /api/devices/deploy and the NOT_DEPLOYED answer to hbbs (off = every device counts as deployed)
   conn-audit-ref-ttl: 86400 # lifetime (seconds) of controller-user audit snapshots
 
 ldap:
