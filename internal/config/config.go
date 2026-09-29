@@ -52,6 +52,7 @@ type Config struct {
 	Ldap       Ldap
 	S3         S3     `mapstructure:"s3"`
 	Worker     Worker `mapstructure:"worker"`
+	Hbbs       Hbbs   `mapstructure:"hbbs"`
 }
 
 func (a *Admin) Init() {

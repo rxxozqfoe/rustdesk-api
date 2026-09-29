@@ -136,3 +136,90 @@ func (d *Device) Cli(c *gin.Context) {
 
 	c.String(http.StatusOK, "")
 }
+
+// Deploy handles `rustdesk --deploy` device provisioning (RustDesk 1.4.9+).
+// It marks the device deployed, assigns an unowned device to the
+// authenticated user, and returns a {"result": ...} verdict the client
+// understands (OK / NOT_ENABLED / INVALID_INPUT / ID_TAKEN). The token is the
+// operator's API token, typically shared across a batch of devices, so it is
+// not bound to any one of them.
+// @Tags Device
+// @Summary Device deployment
+// @Description Provision a device via `rustdesk --deploy`
+// @Accept  json
+// @Produce  json
+// @Param body body requstform.DeviceDeployForm true "Device deploy form"
+// @Success 200 {object} map[string]string
+// @Router /devices/deploy [post]
+// @Security BearerAuth
+func (d *Device) Deploy(c *gin.Context) {
+	if !d.HD.Config.Hbbs.DeployEnabled {
+		c.JSON(http.StatusOK, gin.H{"result": "NOT_ENABLED"})
+		return
+	}
+	f := &requstform.DeviceDeployForm{}
+	if err := c.ShouldBindJSON(f); err != nil || f.Id == "" || f.Uuid == "" || f.Pk == "" {
+		c.JSON(http.StatusOK, gin.H{"result": "INVALID_INPUT"})
+		return
+	}
+	curUser := helper.CurUser(c)
+	if curUser == nil || curUser.Id == 0 {
+		c.JSON(http.StatusOK, gin.H{"result": "INVALID_INPUT"})
+		return
+	}
+
+	peer := d.HD.Services.FindById(f.Id)
+	if peer != nil && peer.RowId != 0 {
+		// Prevent deploy-based peer takeover (IDOR): the device must be the one
+		// the id is bound to. A deployed id is bound by DeployedUuid, which only
+		// this handler writes, so rewriting Uuid through the unauthenticated
+		// /api/sysinfo cannot pass; a not yet deployed id falls back to the uuid
+		// its device reported.
+		boundUuid := peer.DeployedUuid
+		if !peer.Deployed || boundUuid == "" {
+			boundUuid = peer.Uuid
+		}
+		if boundUuid != "" && boundUuid != f.Uuid {
+			c.JSON(http.StatusOK, gin.H{"result": "ID_TAKEN"})
+			return
+		}
+		// Admins deploy on behalf of users and keep the existing owner; anyone
+		// else may only deploy their own or unowned devices. ID_TAKEN would tell
+		// the client the id belongs to another machine, so refuse differently.
+		if peer.UserId != 0 && peer.UserId != curUser.Id && !d.HD.Services.IsAdmin(curUser) {
+			c.JSON(http.StatusOK, gin.H{
+				"result": "PERMISSION_DENIED",
+				"error":  "the device belongs to another user; ask an administrator to deploy it",
+			})
+			return
+		}
+		if peer.UserId == 0 {
+			peer.UserId = curUser.Id
+		}
+		peer.Uuid = f.Uuid
+		peer.Deployed = true
+		peer.DeployedUuid = f.Uuid
+		peer.DeployedPk = f.Pk
+		if err := d.HD.Services.PeerService.Update(peer); err != nil {
+			d.HD.Logger.Warnf("Deploy update peer fail: %v", err)
+			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
+			return
+		}
+	} else {
+		peer = &model.Peer{
+			Id:           f.Id,
+			Uuid:         f.Uuid,
+			UserId:       curUser.Id,
+			Deployed:     true,
+			DeployedUuid: f.Uuid,
+			DeployedPk:   f.Pk,
+		}
+		if err := d.HD.Services.PeerService.Create(peer); err != nil {
+			d.HD.Logger.Warnf("Deploy create peer fail: %v", err)
+			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"result": "OK"})
+}

@@ -28,7 +28,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const DatabaseVersion = 267
+const DatabaseVersion = 268
 
 // @title 管理系统API
 // @version 1.0
@@ -63,6 +63,9 @@ var rootCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		appCtx.Logger.Info("API SERVER START")
+		if appCtx.Config.Hbbs.Enabled() {
+			services.StartCleanup(time.Hour)
+		}
 		apphttp.ApiInit(handlers)
 	},
 }
@@ -353,6 +356,12 @@ func DatabaseAutoUpdate(db *gorm.DB, a *app.AppContext, svcs *service.Service, l
 		if v.Version < 246 {
 			db.Exec("update oauths set issuer = 'https://accounts.google.com' where op = 'google' and issuer is null")
 		}
+		if v.Version < 268 {
+			// Devices known before the deploy gate existed count as deployed,
+			// bound to their current uuid, so turning on hbbs.deploy-enabled
+			// does not lock out the existing fleet.
+			db.Exec("update peers set deployed = ?, deployed_uuid = uuid where deployed = ?", true, false)
+		}
 	}
 }
 
@@ -385,6 +394,7 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.BuildArtifact{},
 		&model.PreBuild{},
 		&model.Worker{},
+		&model.ConnAuditRef{},
 	)
 	if err != nil {
 		a.Logger.Error("migrate err :=>", err)

@@ -43,5 +43,6 @@ func ApiInit(hd *deps.HandlerDeps) {
 	router.Init(g, hd)
 	router.ApiInit(g, hd)
 	router.WorkerInit(g, hd)
+	router.HbbsInit(g, hd)
 	Run(g, hd.Config.Gin.ApiAddr)
 }

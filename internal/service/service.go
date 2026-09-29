@@ -44,6 +44,7 @@ type Service struct {
 	*PreBuildService
 	*WorkerService
 	*WorkerRegistryService
+	*ConnAuditRefService
 }
 
 func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Locker, s3c *s3.Client) *Service {
@@ -68,6 +69,7 @@ func New(c *config.Config, g *gorm.DB, l *logger.Logger, j *jwt.Jwt, lo lock.Loc
 		PreBuildService:       NewPreBuildService(sc),
 		WorkerService:         &WorkerService{ctx: sc},
 		WorkerRegistryService: &WorkerRegistryService{ctx: sc},
+		ConnAuditRefService:   &ConnAuditRefService{ctx: sc},
 	}
 	sc.Services = s // tie the knot so siblings can reach each other via ctx.Services
 	return s
