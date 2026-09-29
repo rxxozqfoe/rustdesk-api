@@ -91,7 +91,9 @@ func (us *UserService) GenerateToken(u *model.User) string {
 	if len(us.ctx.Jwt.Key) > 0 {
 		return us.ctx.Jwt.GenerateToken(u.Id)
 	}
-	return utils.Md5(u.Username + time.Now().String())
+	// Opaque random access token (crypto/rand). md5(username + time) was
+	// predictable enough to guess.
+	return utils.RandomString(32)
 }
 
 // Login 登录

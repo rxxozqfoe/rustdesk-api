@@ -16,6 +16,7 @@ import (
 	"hash"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -166,9 +167,16 @@ func getPublicKey(r *http.Request) ([]byte, error) {
 		return bytePublicKey, errors.New("no x-oss-pub-key-url field in Request header ")
 	}
 	publicKeyURL, _ := base64.StdEncoding.DecodeString(publicKeyURLBase64)
-	// fmt.Printf("publicKeyURL={%s}\n", publicKeyURL)
+	// The header comes from whoever calls the callback, so only fetch keys from
+	// Aliyun's public key host (as Aliyun's callback docs require); any other
+	// URL would let a caller make this server fetch arbitrary URLs (SSRF).
+	keyURL, err := url.Parse(string(publicKeyURL))
+	if err != nil || (keyURL.Scheme != "http" && keyURL.Scheme != "https") ||
+		keyURL.Host != "gosspublic.alicdn.com" {
+		return bytePublicKey, errors.New("x-oss-pub-key-url is not an Aliyun OSS public key URL")
+	}
 	// get PublicKey Content from URL
-	responsePublicKeyURL, err := http.Get(string(publicKeyURL))
+	responsePublicKeyURL, err := http.Get(keyURL.String()) //nolint:gosec // G107/G704: host is checked above
 	if err != nil {
 		fmt.Printf("Get PublicKey Content from URL failed : %s \n", err.Error())
 		return bytePublicKey, err
