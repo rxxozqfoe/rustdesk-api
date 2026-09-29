@@ -157,7 +157,7 @@ func (d *Device) Deploy(c *gin.Context) {
 		return
 	}
 	f := &requstform.DeviceDeployForm{}
-	if err := c.ShouldBindJSON(f); err != nil || f.Id == "" || f.Uuid == "" {
+	if err := c.ShouldBindJSON(f); err != nil || f.Id == "" || f.Uuid == "" || f.Pk == "" {
 		c.JSON(http.StatusOK, gin.H{"result": "INVALID_INPUT"})
 		return
 	}
@@ -169,24 +169,40 @@ func (d *Device) Deploy(c *gin.Context) {
 
 	peer := d.HD.Services.FindById(f.Id)
 	if peer != nil && peer.RowId != 0 {
-		// Prevent deploy-based peer takeover (IDOR): only the current owner (or
-		// an unowned peer) may (re)deploy an id, and the bound uuid must match.
-		// Reject anything owned by another user or bound to a different device.
+		// Prevent deploy-based peer takeover (IDOR): the device must be the one
+		// the id is bound to. A deployed id is bound by DeployedUuid, which only
+		// this handler writes, so rewriting Uuid through the unauthenticated
+		// /api/sysinfo cannot pass; a not yet deployed id falls back to the uuid
+		// its device reported. Only the current owner (or an unowned peer) may
+		// (re)deploy an id.
+		boundUuid := peer.DeployedUuid
+		if !peer.Deployed || boundUuid == "" {
+			boundUuid = peer.Uuid
+		}
 		if (peer.UserId != 0 && peer.UserId != curUser.Id) ||
-			(peer.Uuid != "" && peer.Uuid != f.Uuid) {
+			(boundUuid != "" && boundUuid != f.Uuid) {
 			c.JSON(http.StatusOK, gin.H{"result": "ID_TAKEN"})
 			return
 		}
 		peer.Uuid = f.Uuid
 		peer.UserId = curUser.Id
 		peer.Deployed = true
+		peer.DeployedUuid = f.Uuid
+		peer.DeployedPk = f.Pk
 		if err := d.HD.Services.PeerService.Update(peer); err != nil {
 			d.HD.Logger.Warnf("Deploy update peer fail: %v", err)
 			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
 			return
 		}
 	} else {
-		peer = &model.Peer{Id: f.Id, Uuid: f.Uuid, UserId: curUser.Id, Deployed: true}
+		peer = &model.Peer{
+			Id:           f.Id,
+			Uuid:         f.Uuid,
+			UserId:       curUser.Id,
+			Deployed:     true,
+			DeployedUuid: f.Uuid,
+			DeployedPk:   f.Pk,
+		}
 		if err := d.HD.Services.PeerService.Create(peer); err != nil {
 			d.HD.Logger.Warnf("Deploy create peer fail: %v", err)
 			c.JSON(http.StatusOK, gin.H{"result": "SERVER_ERROR"})
