@@ -353,6 +353,12 @@ func DatabaseAutoUpdate(db *gorm.DB, a *app.AppContext, svcs *service.Service, l
 		if v.Version < 246 {
 			db.Exec("update oauths set issuer = 'https://accounts.google.com' where op = 'google' and issuer is null")
 		}
+		if v.Version < 268 {
+			// Devices known before the deploy gate existed count as deployed,
+			// bound to their current uuid, so turning on hbbs.deploy-enabled
+			// does not lock out the existing fleet.
+			db.Exec("update peers set deployed = ?, deployed_uuid = uuid where deployed = ?", true, false)
+		}
 	}
 }
 

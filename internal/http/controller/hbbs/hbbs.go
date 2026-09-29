@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
 	"github.com/lejianwen/rustdesk-api/v2/internal/http/response"
-	"github.com/lejianwen/rustdesk-api/v2/internal/model"
 )
 
 // Hbbs holds the internal endpoints the RustDesk rendezvous server calls to
@@ -49,17 +48,20 @@ func (h *Hbbs) ConnAuditRef(c *gin.Context) {
 }
 
 // DeviceDeployed reports whether a device is provisioned, for the rendezvous
-// NOT_DEPLOYED gate. Looks up by uuid first, then id.
+// NOT_DEPLOYED gate. hbbs.deploy-enabled is the single switch: with it off
+// every device counts as deployed, whatever hbbs's DEPLOY_ENABLED says.
+// hbbs asks only after its own uuid check, so the uuid/pk it sends are the
+// device's; they must match the ones recorded when the id was deployed.
 func (h *Hbbs) DeviceDeployed(c *gin.Context) {
-	id := c.Query("id")
+	if !h.HD.Config.Hbbs.DeployEnabled {
+		response.Success(c, gin.H{"deployed": true})
+		return
+	}
 	uuid := c.Query("uuid")
-	var peer *model.Peer
-	if uuid != "" {
-		peer = h.HD.Services.PeerService.FindByUuid(uuid)
-	}
-	if (peer == nil || peer.RowId == 0) && id != "" {
-		peer = h.HD.Services.PeerService.FindById(id)
-	}
-	deployed := peer != nil && peer.RowId != 0 && peer.Deployed
+	pk := c.Query("pk")
+	peer := h.HD.Services.PeerService.FindById(c.Query("id"))
+	deployed := peer.RowId != 0 && peer.Deployed &&
+		(uuid == "" || peer.DeployedUuid == "" || peer.DeployedUuid == uuid) &&
+		(pk == "" || peer.DeployedPk == "" || peer.DeployedPk == pk)
 	response.Success(c, gin.H{"deployed": deployed})
 }

@@ -20,6 +20,11 @@ type Peer struct {
 	// Deployed marks a device as provisioned via `rustdesk --deploy` (RustDesk 1.4.9+).
 	// The rendezvous server may gate RegisterPk on this flag (NOT_DEPLOYED).
 	Deployed bool `json:"deployed" gorm:"default:0;not null;index"`
+	// DeployedUuid / DeployedPk bind a deployment to the device that ran it
+	// (base64, as the client sends them). Unlike Uuid, /api/sysinfo never
+	// writes them, so rewriting a peer's Uuid cannot satisfy the gate.
+	DeployedUuid string `json:"-" gorm:"default:'';not null;"`
+	DeployedPk   string `json:"-" gorm:"default:'';not null;"`
 	TimeModel
 }
 
