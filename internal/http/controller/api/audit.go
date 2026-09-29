@@ -84,7 +84,7 @@ func (a *Audit) resolveController(ac *model.AuditConn) {
 	if ac.ConnAuditRef == "" {
 		return
 	}
-	snap := a.HD.Services.ConnAuditRefService.Lookup(ac.ConnAuditRef)
+	snap := a.HD.Services.Lookup(ac.ConnAuditRef)
 	if snap == nil {
 		return
 	}

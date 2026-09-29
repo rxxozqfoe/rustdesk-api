@@ -33,13 +33,13 @@ func (h *Hbbs) ConnAuditRef(c *gin.Context) {
 		response.Fail(c, 400, "ref and token are required")
 		return
 	}
-	u, _ := h.HD.Services.UserService.InfoByAccessToken(f.Token)
+	u, _ := h.HD.Services.InfoByAccessToken(f.Token)
 	if u == nil || u.Id == 0 {
 		response.Fail(c, 401, "invalid user token")
 		return
 	}
 	ttl := time.Duration(h.HD.Config.Hbbs.RefTTLSeconds()) * time.Second
-	if err := h.HD.Services.ConnAuditRefService.Upsert(f.Ref, u.Id, u.Username, ttl); err != nil {
+	if err := h.HD.Services.Upsert(f.Ref, u.Id, u.Username, ttl); err != nil {
 		h.HD.Logger.Warnf("hbbs ConnAuditRef upsert fail: %v", err)
 		response.Fail(c, 500, "store failed")
 		return
@@ -59,7 +59,7 @@ func (h *Hbbs) DeviceDeployed(c *gin.Context) {
 	}
 	uuid := c.Query("uuid")
 	pk := c.Query("pk")
-	peer := h.HD.Services.PeerService.FindById(c.Query("id"))
+	peer := h.HD.Services.FindById(c.Query("id"))
 	deployed := peer.RowId != 0 && peer.Deployed &&
 		(uuid == "" || peer.DeployedUuid == "" || peer.DeployedUuid == uuid) &&
 		(pk == "" || peer.DeployedPk == "" || peer.DeployedPk == pk)
