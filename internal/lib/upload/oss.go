@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/hmac"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // G501: Content-MD5 is part of the OSS callback signature
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // G505: OSS V1 policy signatures are HMAC-SHA1
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -87,7 +87,7 @@ func (oc *Oss) GetPolicyToken(uploadDir string) string {
 	}
 	debyte := base64.StdEncoding.EncodeToString(result)
 	h := hmac.New(func() hash.Hash {
-		return sha1.New()
+		return sha1.New() //nolint:gosec // G401: required by the OSS V1 signature
 	}, []byte(oc.AccessKeySecret))
 	// io.WriteString on an hmac hash never returns an error; ignore it.
 	_, _ = io.WriteString(h, debyte)
@@ -233,7 +233,7 @@ func getMD5FromNewAuthString(r *http.Request) ([]byte, error) {
 	// fmt.Printf("NewlyConstructedAuthString={%s}\n", strAuth)
 
 	// Generate MD5 from the New Auth String
-	md5Ctx := md5.New()
+	md5Ctx := md5.New() //nolint:gosec // G401: required by the OSS callback signature
 	md5Ctx.Write([]byte(strAuth))
 	byteMD5 = md5Ctx.Sum(nil)
 

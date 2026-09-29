@@ -55,7 +55,7 @@ func (g *Group) Users(c *gin.Context) {
 		data = append(data, up)
 	}
 	c.JSON(http.StatusOK, response.DataResponse{
-		Total: uint(userList.Total),
+		Total: uint(userList.Total), //nolint:gosec // G115: a row count is never negative
 		Data:  data,
 	})
 }
@@ -119,7 +119,7 @@ func (g *Group) Peers(c *gin.Context) {
 
 	}
 	c.JSON(http.StatusOK, response.DataResponse{
-		Total: uint(peerList.Total),
+		Total: uint(peerList.Total), //nolint:gosec // G115: a row count is never negative
 		Data:  data,
 	})
 }

@@ -82,7 +82,7 @@ func (co *Config) AdminConfig(c *gin.Context) {
 	if hello == "" {
 		helloFile := co.HD.Config.Admin.HelloFile
 		if helloFile != "" {
-			b, err := os.ReadFile(helloFile)
+			b, err := os.ReadFile(helloFile) //nolint:gosec // G304: path comes from admin.hello-file in the server config
 			if err == nil && len(b) > 0 {
 				hello = string(b)
 			}

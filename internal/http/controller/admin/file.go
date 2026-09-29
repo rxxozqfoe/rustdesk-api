@@ -69,7 +69,7 @@ func (f *File) Upload(c *gin.Context) {
 	webPath := "/upload/" + timePath
 	path := f.HD.Config.Gin.ResourcesPath + webPath
 	dst := path + file.Filename
-	err := os.MkdirAll(path, os.ModePerm)
+	err := os.MkdirAll(path, 0750)
 	if err != nil {
 		return
 	}

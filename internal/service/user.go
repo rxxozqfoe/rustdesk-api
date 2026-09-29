@@ -355,7 +355,7 @@ func (us *UserService) RegisterByOauth(oauthUser *model.OauthUser, op string) (*
 // GenerateUsernameByOauth 生成用户名
 func (us *UserService) GenerateUsernameByOauth(name string) string {
 	for us.IsUsernameExists(name) {
-		name += strconv.Itoa(rand.Intn(10)) // Append a random digit (0-9)
+		name += strconv.Itoa(rand.Intn(10)) //nolint:gosec // G404: username suffix, not a secret
 	}
 	return name
 }
@@ -420,8 +420,8 @@ func (us *UserService) Register(username string, email string, password string, 
 
 func (us *UserService) TokenList(page uint, size uint, f func(tx *gorm.DB)) *model.UserTokenList {
 	res := &model.UserTokenList{}
-	res.Page = int64(page)
-	res.PageSize = int64(size)
+	res.Page = int64(page)     //nolint:gosec // G115: pagination value from query parsing
+	res.PageSize = int64(size) //nolint:gosec // G115: pagination value from query parsing
 	tx := us.ctx.DB.Model(&model.UserToken{})
 	if f != nil {
 		f(tx)

@@ -108,5 +108,5 @@ func queryList[T any](db *gorm.DB, page, pageSize uint, list Paginator, dest *[]
 	var total int64
 	tx.Count(&total)
 	tx.Scopes(Paginate(page, pageSize)).Find(dest)
-	list.SetPagination(int64(page), int64(pageSize), total)
+	list.SetPagination(int64(page), int64(pageSize), total) //nolint:gosec // G115: pagination values from query parsing
 }

@@ -50,13 +50,13 @@ func (r *Record) Upload(c *gin.Context) {
 	switch opType {
 	case "new":
 		// Create directory if not exists
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			response.Error(c, "failed to create record directory: "+err.Error())
 			return
 		}
 		// Create empty file
 		fp := filepath.Join(dir, fileName)
-		f, err := os.Create(fp)
+		f, err := os.Create(fp) //nolint:gosec // G304: fileName is reduced to filepath.Base above
 		if err != nil {
 			response.Error(c, "failed to create file: "+err.Error())
 			return
@@ -72,7 +72,7 @@ func (r *Record) Upload(c *gin.Context) {
 		offset, _ := strconv.ParseInt(offsetStr, 10, 64)
 
 		fp := filepath.Join(dir, fileName)
-		f, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE, 0644)
+		f, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE, 0600) //nolint:gosec // G304: fileName is reduced to filepath.Base above
 		if err != nil {
 			response.Error(c, "failed to open file: "+err.Error())
 			return
@@ -100,7 +100,7 @@ func (r *Record) Upload(c *gin.Context) {
 		offset, _ := strconv.ParseInt(offsetStr, 10, 64)
 
 		fp := filepath.Join(dir, fileName)
-		f, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE, 0644)
+		f, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE, 0600) //nolint:gosec // G304: fileName is reduced to filepath.Base above
 		if err != nil {
 			response.Error(c, "failed to open file: "+err.Error())
 			return

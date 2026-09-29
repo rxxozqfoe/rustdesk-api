@@ -111,7 +111,7 @@ func (s *PreBuildService) Trigger(version, platform, arch string) (*model.PreBui
 	if logDir == "" {
 		return nil, fmt.Errorf("worker.log-cache-dir is not configured")
 	}
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create log cache dir %s: %w", logDir, err)
 	}
 	logPath := filepath.Join(logDir, fmt.Sprintf("prebuild_%s_%s_%s_%d.tmp.log", version, platform, arch, time.Now().Unix()))
@@ -157,7 +157,7 @@ func (s *PreBuildService) GetLog(id uint, offset int64) (string, int64, error) {
 }
 
 func readLocalLog(path string, offset int64) (string, int64, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // G304: path is built from the log cache dir and a build id
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", 0, nil

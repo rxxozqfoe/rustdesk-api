@@ -37,7 +37,7 @@ type Logger struct {
 func New(c *Config) *Logger {
 	var out io.Writer = os.Stdout
 	if c.Path != "" {
-		f, err := os.OpenFile(c.Path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		f, err := os.OpenFile(c.Path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 		if err != nil {
 			panic("open log file fail: " + err.Error())
 		}

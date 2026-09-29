@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"sync"
@@ -46,7 +46,7 @@ func (c *FileCache) getValue(key string) (string, error) {
 		_ = os.Remove(f)
 		return "", nil
 	}
-	data, err := os.ReadFile(f)
+	data, err := os.ReadFile(f) //nolint:gosec // G304: f is c.Dir plus a hex digest of the key
 	if err != nil {
 		return "", nil
 	}
@@ -60,7 +60,7 @@ func (c *FileCache) saveValue(key string, value string, exp int) error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	err := os.WriteFile(f, ([]byte)(value), 0644)
+	err := os.WriteFile(f, ([]byte)(value), 0600)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (c *FileCache) SetDir(path string) {
 }
 
 func (c *FileCache) fileName(key string) string {
-	f := c.Dir + string(os.PathSeparator) + fmt.Sprintf("%x", md5.Sum([]byte(key)))
+	f := c.Dir + string(os.PathSeparator) + fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
 	return f
 }
 

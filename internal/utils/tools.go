@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // G501: Md5 only verifies legacy password hashes
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -11,7 +11,7 @@ import (
 )
 
 func Md5(str string) string {
-	t := md5.Sum(([]byte)(str))
+	t := md5.Sum(([]byte)(str)) //nolint:gosec // G401: legacy password hash compatibility only
 	return fmt.Sprintf("%x", t)
 }
 
