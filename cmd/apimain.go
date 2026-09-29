@@ -63,6 +63,9 @@ var rootCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		appCtx.Logger.Info("API SERVER START")
+		if appCtx.Config.Hbbs.Enabled() {
+			services.ConnAuditRefService.StartCleanup(time.Hour)
+		}
 		apphttp.ApiInit(handlers)
 	},
 }

@@ -48,3 +48,17 @@ func (s *ConnAuditRefService) CleanExpired() error {
 	return s.ctx.DB.Where("expired_at != 0 and expired_at < ?", time.Now().Unix()).
 		Delete(&model.ConnAuditRef{}).Error
 }
+
+// StartCleanup runs CleanExpired now and then every interval for the life of
+// the process. Snapshots are only read before they expire, and hbbs adds one
+// per controlling connection, so without this the table grows without bound.
+func (s *ConnAuditRefService) StartCleanup(interval time.Duration) {
+	go func() {
+		for {
+			if err := s.CleanExpired(); err != nil {
+				s.ctx.Logger.Warnf("clean expired conn audit refs fail: %v", err)
+			}
+			time.Sleep(interval)
+		}
+	}()
+}
