@@ -242,5 +242,5 @@ func (s *WorkerService) FailJob(jobID uint, jobType string, errMsg string, logS3
 }
 
 func openOrCreateFile(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	return os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600) //nolint:gosec // G304: build log path under the log cache dir
 }

@@ -86,7 +86,7 @@ func (os *OauthService) GetOauthCache(key string) *OauthCacheItem {
 func (os *OauthService) SetOauthCache(key string, item *OauthCacheItem, expire uint) {
 	OauthCache.Store(key, item)
 	if expire > 0 {
-		time.AfterFunc(time.Duration(expire)*time.Second, func() {
+		time.AfterFunc(time.Duration(expire)*time.Second, func() { //nolint:gosec // G115: expire is a small TTL in seconds
 			os.DeleteOauthCache(key)
 		})
 	}
@@ -158,7 +158,7 @@ func (os *OauthService) GithubProvider() *oidc.Provider {
 }
 
 func (os *OauthService) LinuxdoProvider() *oidc.Provider {
-	return (&oidc.ProviderConfig{
+	return (&oidc.ProviderConfig{ //nolint:gosec // G101: endpoint URLs, not credentials
 		IssuerURL:     "",
 		AuthURL:       "https://connect.linux.do/oauth2/authorize",
 		TokenURL:      "https://connect.linux.do/oauth2/token",

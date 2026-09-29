@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/hmac"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // G501: Content-MD5 is part of the OSS callback signature
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // G505: OSS V1 policy signatures are HMAC-SHA1
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -16,6 +16,7 @@ import (
 	"hash"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -86,7 +87,7 @@ func (oc *Oss) GetPolicyToken(uploadDir string) string {
 	}
 	debyte := base64.StdEncoding.EncodeToString(result)
 	h := hmac.New(func() hash.Hash {
-		return sha1.New()
+		return sha1.New() //nolint:gosec // G401: required by the OSS V1 signature
 	}, []byte(oc.AccessKeySecret))
 	// io.WriteString on an hmac hash never returns an error; ignore it.
 	_, _ = io.WriteString(h, debyte)
@@ -166,9 +167,16 @@ func getPublicKey(r *http.Request) ([]byte, error) {
 		return bytePublicKey, errors.New("no x-oss-pub-key-url field in Request header ")
 	}
 	publicKeyURL, _ := base64.StdEncoding.DecodeString(publicKeyURLBase64)
-	// fmt.Printf("publicKeyURL={%s}\n", publicKeyURL)
+	// The header comes from whoever calls the callback, so only fetch keys from
+	// Aliyun's public key host (as Aliyun's callback docs require); any other
+	// URL would let a caller make this server fetch arbitrary URLs (SSRF).
+	keyURL, err := url.Parse(string(publicKeyURL))
+	if err != nil || (keyURL.Scheme != "http" && keyURL.Scheme != "https") ||
+		keyURL.Host != "gosspublic.alicdn.com" {
+		return bytePublicKey, errors.New("x-oss-pub-key-url is not an Aliyun OSS public key URL")
+	}
 	// get PublicKey Content from URL
-	responsePublicKeyURL, err := http.Get(string(publicKeyURL))
+	responsePublicKeyURL, err := http.Get(keyURL.String()) //nolint:gosec // G107/G704: host is checked above
 	if err != nil {
 		fmt.Printf("Get PublicKey Content from URL failed : %s \n", err.Error())
 		return bytePublicKey, err
@@ -225,7 +233,7 @@ func getMD5FromNewAuthString(r *http.Request) ([]byte, error) {
 	// fmt.Printf("NewlyConstructedAuthString={%s}\n", strAuth)
 
 	// Generate MD5 from the New Auth String
-	md5Ctx := md5.New()
+	md5Ctx := md5.New() //nolint:gosec // G401: required by the OSS callback signature
 	md5Ctx.Write([]byte(strAuth))
 	byteMD5 = md5Ctx.Sum(nil)
 

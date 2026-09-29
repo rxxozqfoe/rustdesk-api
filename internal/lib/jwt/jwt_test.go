@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+//nolint:gosec // G101: throwaway test key
 var pk = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAnJpq2Sy91iGW3+EuG4V2ke59tITpGINzht0rO8WiRwu11W4p
 wakS4K4BbjvmC8YjaxXhKE5LHDw0IXvTdIDN7Fuu4qs9xWXIoK+nC3qWrVBtj/1o

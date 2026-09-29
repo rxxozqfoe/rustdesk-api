@@ -54,7 +54,7 @@ func (c *Client) EnsureBucket(ctx context.Context, region string) error {
 
 // UploadFile uploads a local file to the given S3 key. Returns the key on success.
 func (c *Client) UploadFile(ctx context.Context, key, filePath, contentType string) (string, error) {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) //nolint:gosec // G304: callers pass server-generated artifact paths
 	if err != nil {
 		return "", fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}

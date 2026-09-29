@@ -1,6 +1,6 @@
 module github.com/lejianwen/rustdesk-api/v2
 
-go 1.26.4
+go 1.26.8
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -22,9 +22,9 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.3
-	golang.org/x/crypto v0.50.0
+	golang.org/x/crypto v0.57.0
 	golang.org/x/oauth2 v0.27.0
-	golang.org/x/text v0.36.0
+	golang.org/x/text v0.42.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/driver/sqlite v1.5.6
@@ -58,7 +58,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.9.0 // indirect
+	github.com/jackc/pgx/v5 v5.11.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -92,11 +92,11 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/image v0.18.0 // indirect
-	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/image v0.46.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.63.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

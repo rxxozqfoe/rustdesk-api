@@ -27,3 +27,5 @@ release/
 bin/
 *.exe
 *.out
+# Local developer config (gitignored); never bake it into an image.
+conf/config.dev.yaml

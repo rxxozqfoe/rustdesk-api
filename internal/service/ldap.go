@@ -82,7 +82,7 @@ func (ls *LdapService) connectAndBind(cfg *config.Ldap, username, password strin
 	var conn *ldap.Conn
 	if u.Scheme == "ldaps" {
 		// WARNING: InsecureSkipVerify: true is not recommended for production
-		tlsConfig := &tls.Config{InsecureSkipVerify: !cfg.TlsVerify}
+		tlsConfig := &tls.Config{InsecureSkipVerify: !cfg.TlsVerify} //nolint:gosec // G402: explicit operator opt-out via ldap.tls-verify
 		if cfg.TlsCaFile != "" {
 			caCert, err := os.ReadFile(cfg.TlsCaFile)
 			if err != nil {
