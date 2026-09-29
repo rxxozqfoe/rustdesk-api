@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	deps "github.com/lejianwen/rustdesk-api/v2/internal/http/deps"
@@ -139,9 +138,11 @@ func (d *Device) Cli(c *gin.Context) {
 }
 
 // Deploy handles `rustdesk --deploy` device provisioning (RustDesk 1.4.9+).
-// It marks the device deployed, binds it to the authenticated user, reuses the
-// presented token for the device, and returns a {"result": ...} verdict the
-// client understands (OK / NOT_ENABLED / INVALID_INPUT / ID_TAKEN).
+// It marks the device deployed, assigns an unowned device to the
+// authenticated user, and returns a {"result": ...} verdict the client
+// understands (OK / NOT_ENABLED / INVALID_INPUT / ID_TAKEN). The token is the
+// operator's API token, typically shared across a batch of devices, so it is
+// not bound to any one of them.
 // @Tags Device
 // @Summary Device deployment
 // @Description Provision a device via `rustdesk --deploy`
@@ -173,19 +174,29 @@ func (d *Device) Deploy(c *gin.Context) {
 		// the id is bound to. A deployed id is bound by DeployedUuid, which only
 		// this handler writes, so rewriting Uuid through the unauthenticated
 		// /api/sysinfo cannot pass; a not yet deployed id falls back to the uuid
-		// its device reported. Only the current owner (or an unowned peer) may
-		// (re)deploy an id.
+		// its device reported.
 		boundUuid := peer.DeployedUuid
 		if !peer.Deployed || boundUuid == "" {
 			boundUuid = peer.Uuid
 		}
-		if (peer.UserId != 0 && peer.UserId != curUser.Id) ||
-			(boundUuid != "" && boundUuid != f.Uuid) {
+		if boundUuid != "" && boundUuid != f.Uuid {
 			c.JSON(http.StatusOK, gin.H{"result": "ID_TAKEN"})
 			return
 		}
+		// Admins deploy on behalf of users and keep the existing owner; anyone
+		// else may only deploy their own or unowned devices. ID_TAKEN would tell
+		// the client the id belongs to another machine, so refuse differently.
+		if peer.UserId != 0 && peer.UserId != curUser.Id && !d.HD.Services.IsAdmin(curUser) {
+			c.JSON(http.StatusOK, gin.H{
+				"result": "PERMISSION_DENIED",
+				"error":  "the device belongs to another user; ask an administrator to deploy it",
+			})
+			return
+		}
+		if peer.UserId == 0 {
+			peer.UserId = curUser.Id
+		}
 		peer.Uuid = f.Uuid
-		peer.UserId = curUser.Id
 		peer.Deployed = true
 		peer.DeployedUuid = f.Uuid
 		peer.DeployedPk = f.Pk
@@ -209,10 +220,6 @@ func (d *Device) Deploy(c *gin.Context) {
 			return
 		}
 	}
-
-	// Reuse the presented access token for this device.
-	token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
-	d.HD.Services.BindTokenToDevice(token, f.Uuid, f.Id)
 
 	c.JSON(http.StatusOK, gin.H{"result": "OK"})
 }
