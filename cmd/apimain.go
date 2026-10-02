@@ -424,7 +424,9 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.ConnAuditRef{},
 	)
 	if err != nil {
-		a.Logger.Error("migrate err :=>", err)
+		// Recording the version anyway would skip this migration on every
+		// later start and leave the schema behind the code.
+		a.Logger.Fatalf("database migration failed: %v", err)
 	}
 	db.Create(&model.Version{Version: version})
 	var vc int64
