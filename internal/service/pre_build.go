@@ -19,18 +19,19 @@ type PreBuildService struct {
 }
 
 func NewPreBuildService(ctx *ServiceContext) *PreBuildService {
-	svc := &PreBuildService{ctx: ctx}
-	svc.recoverStaleJobs()
-	return svc
+	return &PreBuildService{ctx: ctx}
 }
 
-func (s *PreBuildService) recoverStaleJobs() {
-	s.ctx.DB.Model(&model.PreBuild{}).
+// RecoverStaleJobs marks builds left "building" by a previous run as failed.
+// Call it on startup after the database migration: the constructor runs
+// before the migration, when pre_builds may not exist yet.
+func (s *PreBuildService) RecoverStaleJobs() error {
+	return s.ctx.DB.Model(&model.PreBuild{}).
 		Where("status = ?", model.BuildStatusBuilding).
 		Updates(map[string]any{
 			"status": model.BuildStatusFailed,
 			"error":  "interrupted by server restart",
-		})
+		}).Error
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────

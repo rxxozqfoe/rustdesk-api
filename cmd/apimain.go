@@ -256,6 +256,11 @@ func InitApp() {
 		a.Logger.Errorf("failed to close stale audit connections: %v", err)
 	}
 
+	// Fail pre-builds a previous server run left in progress
+	if err := svcs.RecoverStaleJobs(); err != nil {
+		a.Logger.Errorf("failed to recover stale pre-build jobs: %v", err)
+	}
+
 	// Publish to package-level wiring vars so cobra commands can reach them.
 	appCtx = a
 	services = svcs
