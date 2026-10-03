@@ -29,6 +29,7 @@ gorm:
   type: "sqlite"
   max-idle-conns: 10
   max-open-conns: 100
+  connect-timeout: 60s # how long startup retries a database that is not accepting connections yet, then exits
 
 sqlite:
   path: "./data/rustdeskapi.db"

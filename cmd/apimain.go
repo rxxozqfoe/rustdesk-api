@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	mysqldriver "github.com/go-sql-driver/mysql"
 	"github.com/lejianwen/rustdesk-api/v2/internal/app"
 	"github.com/lejianwen/rustdesk-api/v2/internal/config"
 	apphttp "github.com/lejianwen/rustdesk-api/v2/internal/http"
@@ -29,6 +31,9 @@ import (
 )
 
 const DatabaseVersion = 268
+
+// mysqlErrBadDB is MySQL's ER_BAD_DB_ERROR: the database does not exist.
+const mysqlErrBadDB = 1049
 
 // @title 管理系统API
 // @version 1.0
@@ -175,49 +180,8 @@ func InitApp() {
 		})
 	}
 
-	// Database
-	var db *gorm.DB
-	switch a.Config.Gorm.Type {
-	case config.TypeMysql:
-		dsn := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=%s",
-			a.Config.Mysql.Username,
-			a.Config.Mysql.Password,
-			a.Config.Mysql.Addr,
-			a.Config.Mysql.Dbname,
-			a.Config.Mysql.Tls,
-		)
-		db = orm.NewMysql(&orm.MysqlConfig{
-			Dsn:          dsn,
-			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
-			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
-		}, a.Logger)
-
-	case config.TypePostgresql:
-		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=%s",
-			a.Config.Postgresql.Host,
-			a.Config.Postgresql.Port,
-			a.Config.Postgresql.User,
-			a.Config.Postgresql.Password,
-			a.Config.Postgresql.Dbname,
-			a.Config.Postgresql.Sslmode,
-			a.Config.Postgresql.TimeZone,
-		)
-		db = orm.NewPostgresql(&orm.PostgresqlConfig{
-			Dsn:          dsn,
-			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
-			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
-		}, a.Logger)
-
-	case config.TypeSqlite:
-		db = orm.NewSqlite(&orm.SqliteConfig{
-			Path:         a.Config.Sqlite.Path,
-			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
-			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
-		}, a.Logger)
-
-	default:
-		a.Logger.Fatalf("unsupported database type: %s", a.Config.Gorm.Type)
-	}
+	// Database (retried until it accepts connections; exits if it never does)
+	db := openDatabase(a)
 
 	// OSS
 	oss := &upload.Oss{
@@ -292,45 +256,113 @@ func InitApp() {
 		a.Logger.Errorf("failed to close stale audit connections: %v", err)
 	}
 
+	// Fail pre-builds a previous server run left in progress
+	if err := svcs.RecoverStaleJobs(); err != nil {
+		a.Logger.Errorf("failed to recover stale pre-build jobs: %v", err)
+	}
+
 	// Publish to package-level wiring vars so cobra commands can reach them.
 	appCtx = a
 	services = svcs
 	handlers = hd
 }
 
+// openDatabase connects to the configured database. A database starting
+// alongside the api is retried until gorm.connect-timeout; after that the api
+// exits instead of serving requests against a database it never reached.
+func openDatabase(a *app.AppContext) *gorm.DB {
+	var open func() (*gorm.DB, error)
+	switch a.Config.Gorm.Type {
+	case config.TypeMysql:
+		open = func() (*gorm.DB, error) { return openMysql(a) }
+
+	case config.TypePostgresql:
+		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=%s",
+			a.Config.Postgresql.Host,
+			a.Config.Postgresql.Port,
+			a.Config.Postgresql.User,
+			a.Config.Postgresql.Password,
+			a.Config.Postgresql.Dbname,
+			a.Config.Postgresql.Sslmode,
+			a.Config.Postgresql.TimeZone,
+		)
+		open = func() (*gorm.DB, error) {
+			return orm.NewPostgresql(&orm.PostgresqlConfig{
+				Dsn:          dsn,
+				MaxIdleConns: a.Config.Gorm.MaxIdleConns,
+				MaxOpenConns: a.Config.Gorm.MaxOpenConns,
+			}, a.Logger)
+		}
+
+	case config.TypeSqlite:
+		open = func() (*gorm.DB, error) {
+			return orm.NewSqlite(&orm.SqliteConfig{
+				Path:         a.Config.Sqlite.Path,
+				MaxIdleConns: a.Config.Gorm.MaxIdleConns,
+				MaxOpenConns: a.Config.Gorm.MaxOpenConns,
+			}, a.Logger)
+		}
+
+	default:
+		a.Logger.Fatalf("unsupported database type: %s", a.Config.Gorm.Type)
+	}
+
+	timeout := a.Config.Gorm.ConnectTimeout
+	if timeout <= 0 {
+		timeout = config.DefaultConnectTimeout
+	}
+	db, err := orm.OpenWithRetry(timeout, open, func(err error, wait time.Duration) {
+		a.Logger.Warnf("database not ready, retrying in %s: %v", wait, err)
+	})
+	if err != nil {
+		a.Logger.Fatalf("database unavailable after %s: %v", timeout, err)
+	}
+	return db
+}
+
+// openMysql connects to MySQL. If the server is up but the database does not
+// exist yet, it creates the database and connects again.
+func openMysql(a *app.AppContext) (*gorm.DB, error) {
+	c := a.Config.Mysql
+	open := func(dbname string) (*gorm.DB, error) {
+		dsn := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=%s",
+			c.Username,
+			c.Password,
+			c.Addr,
+			dbname,
+			c.Tls,
+		)
+		return orm.NewMysql(&orm.MysqlConfig{
+			Dsn:          dsn,
+			MaxIdleConns: a.Config.Gorm.MaxIdleConns,
+			MaxOpenConns: a.Config.Gorm.MaxOpenConns,
+		}, a.Logger)
+	}
+
+	db, err := open(c.Dbname)
+	var mysqlErr *mysqldriver.MySQLError
+	if err == nil || !errors.As(err, &mysqlErr) || mysqlErr.Number != mysqlErrBadDB {
+		return db, err
+	}
+
+	server, err := open("")
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if sqlDB, err := server.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	}()
+	if err := server.Exec("CREATE DATABASE IF NOT EXISTS `" + c.Dbname + "` DEFAULT CHARSET utf8mb4").Error; err != nil {
+		return nil, err
+	}
+	a.Logger.Info("created database " + c.Dbname)
+	return open(c.Dbname)
+}
+
 func DatabaseAutoUpdate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer app.LocalizerFunc) {
 	version := DatabaseVersion
-
-	if a.Config.Gorm.Type == config.TypeMysql {
-		dbName := db.Migrator().CurrentDatabase()
-		if dbName == "" {
-			dbName = a.Config.Mysql.Dbname
-			dsnWithoutDB := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-				a.Config.Mysql.Username,
-				a.Config.Mysql.Password,
-				a.Config.Mysql.Addr,
-				"",
-			)
-			dbWithoutDB := orm.NewMysql(&orm.MysqlConfig{
-				Dsn: dsnWithoutDB,
-			}, a.Logger)
-			sqlDBWithoutDB, err := dbWithoutDB.DB()
-			if err != nil {
-				a.Logger.Errorf("获取底层 *sql.DB 对象失败: %v", err)
-				return
-			}
-			defer func() {
-				if err := sqlDBWithoutDB.Close(); err != nil {
-					a.Logger.Errorf("关闭连接失败: %v", err)
-				}
-			}()
-
-			if err := dbWithoutDB.Exec("CREATE DATABASE IF NOT EXISTS " + dbName + " DEFAULT CHARSET utf8mb4").Error; err != nil {
-				a.Logger.Error(err)
-				return
-			}
-		}
-	}
 
 	if !db.Migrator().HasTable(&model.Version{}) {
 		Migrate(db, a, svcs, localizer, uint(version))
@@ -397,7 +429,9 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 		&model.ConnAuditRef{},
 	)
 	if err != nil {
-		a.Logger.Error("migrate err :=>", err)
+		// Recording the version anyway would skip this migration on every
+		// later start and leave the schema behind the code.
+		a.Logger.Fatalf("database migration failed: %v", err)
 	}
 	db.Create(&model.Version{Version: version})
 	var vc int64

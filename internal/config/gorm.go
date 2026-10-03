@@ -1,15 +1,23 @@
 package config
 
+import "time"
+
 const (
 	TypeSqlite     = "sqlite"
 	TypeMysql      = "mysql"
 	TypePostgresql = "postgresql"
 )
 
+// DefaultConnectTimeout is used when gorm.connect-timeout is unset or not positive.
+const DefaultConnectTimeout = 60 * time.Second
+
 type Gorm struct {
 	Type         string `mapstructure:"type"`
 	MaxIdleConns int    `mapstructure:"max-idle-conns"`
 	MaxOpenConns int    `mapstructure:"max-open-conns"`
+	// How long startup keeps retrying a database that does not accept
+	// connections yet before the api exits.
+	ConnectTimeout time.Duration `mapstructure:"connect-timeout"`
 }
 
 type Sqlite struct {
