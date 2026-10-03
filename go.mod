@@ -16,7 +16,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/minio/minio-go/v7 v7.0.100
-	github.com/mojocn/base64Captcha v1.3.6
+	github.com/mojocn/base64Captcha v1.3.8
 	github.com/nicksnyder/go-i18n/v2 v2.4.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.9.0
