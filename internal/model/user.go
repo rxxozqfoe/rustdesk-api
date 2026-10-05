@@ -12,6 +12,9 @@ type User struct {
 	IsAdmin  *bool      `json:"is_admin" gorm:"default:0;not null;"`
 	Status   StatusCode `json:"status" gorm:"default:1;not null;"`
 	Remark   string     `json:"remark" gorm:"default:'';not null;"`
+	// PasswordManaged marks the admin whose password admin.password sets, so
+	// the admin panel can hide its change-password action. Not stored.
+	PasswordManaged bool `json:"password_managed,omitempty" gorm:"-"`
 	TimeModel
 }
 

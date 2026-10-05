@@ -18,6 +18,11 @@ admin:
   # ID Server and Relay Server ports https://github.com/lejianwen/rustdesk-api/issues/257
   id-server-port: 21116 # ID Server port (for server cmd)
   relay-server-port: 21117 # ID Server port (for server cmd)
+  # Admin account password, applied on every start; while set it cannot be
+  # changed in the admin panel or with reset-admin-pwd. Empty = a random
+  # password printed once on first start. password-file reads it from a file.
+  password: ""
+  password-file: ""
 
 gin:
   api-addr: "0.0.0.0:21114"

@@ -261,8 +261,51 @@ func (us *UserService) FlushTokenByUuids(uuids []string) error {
 	return us.ctx.DB.Where("device_uuid in (?)", uuids).Delete(&model.UserToken{}).Error
 }
 
+// ManagedAdminId is the account admin.password manages: the admin created on
+// first start, the same one reset-admin-pwd resets.
+const ManagedAdminId uint = 1
+
+var (
+	// ErrAdminPasswordManaged is returned for a password change admin.password
+	// would undo on the next start.
+	ErrAdminPasswordManaged = errors.New("the admin password is managed by the server config (admin.password)")
+	// ErrManagedAdminNotFound means admin.password is set but the admin
+	// account was deleted, so there is nothing to apply it to.
+	ErrManagedAdminNotFound = errors.New("admin account (user id 1) not found")
+)
+
+// IsPasswordManaged reports whether u's password comes from admin.password.
+func (us *UserService) IsPasswordManaged(u *model.User) bool {
+	return u != nil && u.Id == ManagedAdminId && us.ctx.Config.Admin.Password != ""
+}
+
+// SyncManagedAdminPassword applies admin.password to the admin account. A
+// password that already matches is left alone so sessions survive restarts;
+// a changed one logs the admin out everywhere, like any password change.
+func (us *UserService) SyncManagedAdminPassword() (changed bool, err error) {
+	pwd := us.ctx.Config.Admin.Password
+	if pwd == "" {
+		return false, nil
+	}
+	u := us.InfoById(ManagedAdminId)
+	if u.Id == 0 {
+		return false, ErrManagedAdminNotFound
+	}
+	if ok, _, err := utils.VerifyPassword(u.Password, pwd); err == nil && ok {
+		return false, nil
+	}
+	return true, us.setPassword(u, pwd)
+}
+
 // UpdatePassword 更新密码
 func (us *UserService) UpdatePassword(u *model.User, password string) error {
+	if us.IsPasswordManaged(u) {
+		return ErrAdminPasswordManaged
+	}
+	return us.setPassword(u, password)
+}
+
+func (us *UserService) setPassword(u *model.User, password string) error {
 	var err error
 	u.Password, err = utils.EncryptPassword(password)
 	if err != nil {

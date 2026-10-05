@@ -251,6 +251,17 @@ func InitApp() {
 	// Database migration (explicit params — no globals)
 	DatabaseAutoUpdate(db, a, svcs, localizer)
 
+	// admin.password is the admin's password: re-apply it on every start
+	switch changed, err := svcs.SyncManagedAdminPassword(); {
+	case errors.Is(err, service.ErrManagedAdminNotFound):
+		a.Logger.Warnf("admin.password not applied: %v", err)
+	case err != nil:
+		// Failing open would leave a rotated-out password working.
+		a.Logger.Fatalf("failed to apply admin.password: %v", err)
+	case changed:
+		a.Logger.Info("Admin password synced from admin.password")
+	}
+
 	// Close stale audit connections from previous server runs
 	if err := svcs.CloseStaleConns(); err != nil {
 		a.Logger.Errorf("failed to close stale audit connections: %v", err)
@@ -462,8 +473,13 @@ func Migrate(db *gorm.DB, a *app.AppContext, svcs *service.Service, localizer ap
 			IsAdmin:  &isAdmin,
 			GroupId:  1,
 		}
-		pwd := utils.RandomString(8)
-		a.Logger.Info("Admin Password Is: ", pwd)
+		pwd := a.Config.Admin.Password
+		if pwd == "" {
+			pwd = utils.RandomString(8)
+			a.Logger.Info("Admin Password Is: ", pwd)
+		} else {
+			a.Logger.Info("Admin password set from admin.password")
+		}
 		var pwdErr error
 		admin.Password, pwdErr = utils.EncryptPassword(pwd)
 		if pwdErr != nil {
