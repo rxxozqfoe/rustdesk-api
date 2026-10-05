@@ -34,6 +34,7 @@ func (ct *User) Detail(c *gin.Context) {
 	iid, _ := strconv.Atoi(id)
 	u := ct.HD.Services.UserService.InfoById(uint(iid))
 	if u.Id > 0 {
+		u.PasswordManaged = ct.HD.Services.IsPasswordManaged(u)
 		response.Success(c, u)
 		return
 	}
@@ -95,6 +96,9 @@ func (ct *User) List(c *gin.Context) {
 			tx.Where("username like ?", "%"+query.Username+"%")
 		}
 	})
+	for _, u := range res.Users {
+		u.PasswordManaged = ct.HD.Services.IsPasswordManaged(u)
+	}
 	response.Success(c, res)
 }
 

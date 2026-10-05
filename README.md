@@ -86,6 +86,7 @@
 
 * 后台访问地址是`http://<your server>[:port]/_admin/`
 * 初次安装管理员为用户名为`admin`，密码将在控制台打印，可以通过[命令行](#CLI)更改密码
+* 如需自行指定管理员密码，使用`RUSTDESK_API_ADMIN_PASSWORD`或`RUSTDESK_API_ADMIN_PASSWORD_FILE`（见[环境变量](#环境变量)）。每次启动都会重新套用，以配置为准；要修改请改配置后重启
 
   ![img.png](./docs/init_admin_pwd.png)
 
@@ -175,6 +176,8 @@
 | RUSTDESK_API_ADMIN_TITLE                               | 后台标题                                                                           | `RustDesk Api Admin`         |
 | RUSTDESK_API_ADMIN_HELLO                               | 后台欢迎语，可以使用`html`                                                               |                              |
 | RUSTDESK_API_ADMIN_HELLO_FILE                          | 后台欢迎语文件，如果内容多，使用文件更方便。<br>会覆盖`RUSTDESK_API_ADMIN_HELLO`                        | `./conf/admin/hello.html`    |
+| RUSTDESK_API_ADMIN_PASSWORD                            | `admin`账户的密码（4-32个字符），每次启动都会套用；设置后无法在后台或用`reset-admin-pwd`修改。为空则首次启动时随机生成并打印 |                              |
+| RUSTDESK_API_ADMIN_PASSWORD_FILE                       | 存放admin密码的文件（例如挂载的Secret），忽略结尾换行；<br>`RUSTDESK_API_ADMIN_PASSWORD`优先              | `/run/secrets/admin_password` |
 | -----GIN配置-----                                        | ----------                                                                     | ----------                   |
 | RUSTDESK_API_GIN_TRUST_PROXY                           | 信任的代理IP列表，以`,`分割，默认信任所有                                                        | 192.168.1.2,192.168.1.3      |
 | -----GORM配置-----                                       | ----------                                                                     | ---------------------------  |

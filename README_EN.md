@@ -83,6 +83,7 @@ displaying data.Frontend code is available at [rustdesk-api-web](https://github.
 
 * Admin panel URL: `http://<your server[:port]>/_admin/`
 * For the initial installation, the admin username is `admin`, and the password will be printed in the console. You can change the password via the [command line](#CLI).
+* To set the admin password yourself, use `RUSTDESK_API_ADMIN_PASSWORD` or `RUSTDESK_API_ADMIN_PASSWORD_FILE` (see [Environment Variables](#environment-variables)). It is re-applied on every start, so the configured value always wins; change it there and restart.
 
   ![img.png](./docs/init_admin_pwd.png)
 
@@ -173,6 +174,8 @@ The table below does not list all configurations. Please refer to the configurat
 | RUSTDESK_API_ADMIN_TITLE                               | Admin Title                                                                                                                                         | `RustDesk Api Admin`          |
 | RUSTDESK_API_ADMIN_HELLO                               | Admin welcome message, you can use `html`                                                                                                           |                               |
 | RUSTDESK_API_ADMIN_HELLO_FILE                          | Admin welcome message file,<br>will override `RUSTDESK_API_ADMIN_HELLO`                                                                             | `./conf/admin/hello.html`     |
+| RUSTDESK_API_ADMIN_PASSWORD                            | Password of the `admin` account (4-32 characters), applied on every start; while set it cannot be changed in the admin panel or with `reset-admin-pwd`. Empty = random password printed on first start |                               |
+| RUSTDESK_API_ADMIN_PASSWORD_FILE                       | File holding the admin password (e.g. a mounted Secret), trailing newline ignored;<br>`RUSTDESK_API_ADMIN_PASSWORD` takes precedence                | `/run/secrets/admin_password` |
 | ----- GIN Configuration -----                          | ---------------------------------------                                                                                                             | ----------------------------- |
 | RUSTDESK_API_GIN_TRUST_PROXY                           | Trusted proxy IPs, separated by commas.                                                                                                             | 192.168.1.2,192.168.1.3       |
 | ----- GORM Configuration -----                         | ---------------------------------------                                                                                                             | ----------------------------- |

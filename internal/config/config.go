@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -32,7 +33,20 @@ type Admin struct {
 	HelloFile       string `mapstructure:"hello-file"`
 	IdServerPort    int    `mapstructure:"id-server-port"`
 	RelayServerPort int    `mapstructure:"relay-server-port"`
+	// Password, when set, is the admin account's password: it is applied on
+	// every start and cannot be changed through the api. PasswordFile reads
+	// it from a file instead (e.g. a mounted Secret); Password wins.
+	Password     string `mapstructure:"password"`
+	PasswordFile string `mapstructure:"password-file"`
 }
+
+// Length bounds of a managed admin password, the same as the admin
+// password forms accept.
+const (
+	AdminPasswordMinLen = 4
+	AdminPasswordMaxLen = 32
+)
+
 type Config struct {
 	Lang       string `mapstructure:"lang"`
 	App        App
@@ -64,6 +78,30 @@ func (a *Admin) Init() {
 	}
 }
 
+// LoadPassword resolves admin.password, reading admin.password-file when only
+// the file is given (its trailing newline dropped). A password that is
+// configured but unusable is an error rather than silently leaving the admin
+// password unmanaged.
+func (a *Admin) LoadPassword() error {
+	if a.Password == "" && a.PasswordFile != "" {
+		b, err := os.ReadFile(a.PasswordFile)
+		if err != nil {
+			return fmt.Errorf("admin.password-file: %w", err)
+		}
+		a.Password = strings.TrimRight(string(b), "\r\n")
+		if a.Password == "" {
+			return fmt.Errorf("admin.password-file %s is empty", a.PasswordFile)
+		}
+	}
+	if a.Password == "" {
+		return nil
+	}
+	if n := utf8.RuneCountInString(a.Password); n < AdminPasswordMinLen || n > AdminPasswordMaxLen {
+		return fmt.Errorf("admin.password must be %d to %d characters, got %d", AdminPasswordMinLen, AdminPasswordMaxLen, n)
+	}
+	return nil
+}
+
 // Init 初始化配置
 func Init(rowVal *Config, path string) *viper.Viper {
 	if path == "" || path == DefaultConfig {
@@ -77,6 +115,10 @@ func Init(rowVal *Config, path string) *viper.Viper {
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.SetEnvPrefix("RUSTDESK_API")
+	// Env overrides only reach keys viper knows of; declare these so the env
+	// vars work with a config file that predates them.
+	v.SetDefault("admin.password", "")
+	v.SetDefault("admin.password-file", "")
 	v.SetConfigFile(path)
 	v.SetConfigType("yaml")
 	err := v.ReadInConfig()
@@ -103,6 +145,9 @@ func Init(rowVal *Config, path string) *viper.Viper {
 	}
 	rowVal.Rustdesk.LoadKeyFile()
 	rowVal.Admin.Init()
+	if err := rowVal.Admin.LoadPassword(); err != nil {
+		panic(fmt.Errorf("fatal error config: %s", err))
+	}
 	return v
 }
 
