@@ -114,18 +114,15 @@ func TestAutoTime_UpdateChangesTimestamp(t *testing.T) {
 	}
 }
 
-// Verify the zero-value behavior of AutoTime when converted to Unix timestamp.
+// A zero AutoTime must NOT map to Unix 0. The client sends modified_at=0 by
+// default; if a never-set server timestamp also resolved to 0 they would match
+// and the strategy would never be pushed on the first heartbeat. time.Time's
+// zero value is year 1, so Unix() is a large negative number — assert that.
 func TestAutoTime_ZeroValue(t *testing.T) {
 	var at custom_types.AutoTime
 	ts := time.Time(at).Unix()
-	t.Logf("Zero AutoTime.Unix() = %d", ts)
 
-	// time.Time zero value is year 0001, Unix() returns a large negative number
-	if ts == 0 {
-		t.Log("Zero AutoTime maps to Unix 0 — client's default modified_at=0 will match, " +
-			"preventing strategy from being sent on first heartbeat")
-	} else if ts < 0 {
-		t.Log("Zero AutoTime maps to negative Unix — will not match client's 0, " +
-			"so strategy will be sent (correct behavior)")
+	if ts >= 0 {
+		t.Fatalf("zero AutoTime.Unix() = %d, want negative so it never matches client's default 0", ts)
 	}
 }

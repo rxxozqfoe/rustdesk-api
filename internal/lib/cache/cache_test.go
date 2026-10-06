@@ -2,38 +2,8 @@ package cache
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 )
-
-func TestSimpleCache(t *testing.T) {
-
-	type st struct {
-		A string
-		B string
-	}
-
-	items := map[string]interface{}{}
-	items["a"] = "b"
-	items["b"] = "c"
-
-	ab := &st{
-		A: "a",
-		B: "b",
-	}
-	items["ab"] = *ab
-
-	a := items["a"]
-	fmt.Println(a)
-
-	b := items["b"]
-	fmt.Println(b)
-
-	ab.A = "aa"
-	ab2 := (items["ab"]).(st)
-	fmt.Println(ab2, reflect.TypeOf(ab2))
-
-}
 
 func TestFileCacheSet(t *testing.T) {
 	fc := New("file")

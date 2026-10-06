@@ -1,7 +1,6 @@
 package lock
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 )
@@ -38,45 +37,26 @@ func TestLocal_GetLock(t *testing.T) {
 	}
 }
 
+// TestLocal_Lock verifies that Lock/UnLock on the same key serialize their
+// critical sections: m goroutines each increment a shared counter under the
+// lock, and every increment must survive.
 func TestLocal_Lock(t *testing.T) {
 	l := NewLocal()
 	wg := sync.WaitGroup{}
-	m := 10
+	const m = 10
 	wg.Add(m)
 	i := 0
 	for j := 0; j < m; j++ {
 		go func() {
+			defer wg.Done()
 			l.Lock("key")
-			//fmt.Println(j, i)
 			i++
-			fmt.Println(j, i)
 			l.UnLock("key")
-			wg.Done()
 		}()
 	}
-
 	wg.Wait()
-	fmt.Println(i)
 
-}
-func TestSyncMap(t *testing.T) {
-	m := sync.Map{}
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		v, ok := m.LoadOrStore("key", 1)
-		fmt.Println(1, v, ok)
-		wg.Done()
-	}()
-	go func() {
-		v, ok := m.LoadOrStore("key", 2)
-		fmt.Println(2, v, ok)
-		wg.Done()
-	}()
-	go func() {
-		v, ok := m.LoadOrStore("key", 3)
-		fmt.Println(3, v, ok)
-		wg.Done()
-	}()
-	wg.Wait()
+	if i != m {
+		t.Fatalf("expected i == %d after serialized increments, got %d", m, i)
+	}
 }
